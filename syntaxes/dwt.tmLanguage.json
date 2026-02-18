@@ -1,0 +1,22 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Dreamweaver Template",
+	"scopeName": "text.html.dwt",
+	"patterns": [
+		{
+			"name": "comment.block.dwt.template-directive",
+			"match": "<!--\\s*Template(Begin|End)(Editable|If|MultipleCopy|Repeat)\\b[^>]*-->"
+		},
+		{
+			"name": "comment.block.dwt.template-param",
+			"match": "<!--\\s*TemplateParam\\b[^>]*-->"
+		},
+		{
+			"name": "variable.other.dwt.expression",
+			"match": "@@\\([^)]+\\)@@"
+		},
+		{
+			"include": "text.html.basic"
+		}
+	]
+}

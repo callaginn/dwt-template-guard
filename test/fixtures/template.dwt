@@ -1,0 +1,14 @@
+<html>
+<head>
+<!-- TemplateBeginEditable name="doctitle" -->
+<title>Default Title</title>
+<!-- TemplateEndEditable -->
+</head>
+<body>
+<div class="header">Fixed Header</div>
+<!-- TemplateBeginEditable name="content" -->
+<p>Default content</p>
+<!-- TemplateEndEditable -->
+<div class="footer">Fixed Footer</div>
+</body>
+</html>

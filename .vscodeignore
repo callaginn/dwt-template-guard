@@ -1,0 +1,28 @@
+# Dev tooling
+.vscode/**
+.vscode-test/**
+.vscode-test.mjs
+.gitignore
+.eslintrc.json
+**/.DS_Store
+
+# Source & test files
+src/**
+test/**
+test-input/**
+prompts/**
+tsconfig.json
+esbuild.mjs
+
+# Docs & meta
+DEVELOPMENT.md
+PROMPT.md
+DWT_SYNTAX.md
+
+# Dependencies (except what's needed)
+node_modules/**
+!node_modules/@vscode/codicons/dist/**
+
+# dist - include only the production bundle
+dist/**
+!dist/extension.js

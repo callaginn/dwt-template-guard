@@ -1,0 +1,225 @@
+{
+	"name": "dwt-template-guard",
+	"displayName": "Dreamweaver Template Guard",
+	"description": "Protect non-editable regions in Dreamweaver template files (.dwt, .html)",
+	"version": "0.1.0",
+	"publisher": "callaginn",
+	"license": "MIT",
+	"icon": "media/icon.png",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/callaginn/dwt-template-guard"
+	},
+	"author": {
+		"name": "Stephen Ginn",
+		"email": "callaginn@users.noreply.github.com",
+		"url": "https://cremadesignstudio.com/staff/callaginn"
+	},
+	"engines": {
+		"vscode": "^1.85.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"keywords": [
+		"dreamweaver",
+		"template",
+		"dwt",
+		"editable regions",
+		"protection"
+	],
+	"activationEvents": [
+		"onLanguage:html",
+		"onLanguage:dwt",
+		"onLanguage:php"
+	],
+	"main": "./dist/extension.js",
+	"contributes": {
+		"colors": [
+			{
+				"id": "dwtTemplateGuard.protectedRegionForeground",
+				"description": "Text color for protected (non-editable) template regions",
+				"defaults": {
+					"dark": "#4e4e4e",
+					"light": "#b5b5b5",
+					"highContrast": "#666666",
+					"highContrastLight": "#999999"
+				}
+			},
+			{
+				"id": "dwtTemplateGuard.markerColor",
+				"description": "Text color for editable region marker comments",
+				"defaults": {
+					"dark": "#5a8a5a",
+					"light": "#2e7d32",
+					"highContrast": "#4caf50",
+					"highContrastLight": "#2e7d32"
+				}
+			}
+		],
+		"languages": [
+			{
+				"id": "dwt",
+				"extensions": [
+					".dwt"
+				],
+				"aliases": [
+					"Dreamweaver Template",
+					"DWT"
+				],
+				"configuration": "./dwt-language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "dwt",
+				"scopeName": "text.html.dwt",
+				"path": "./syntaxes/dwt.tmLanguage.json"
+			}
+		],
+		"commands": [
+			{
+				"command": "dwtTemplateGuard.showEditableRegions",
+				"title": "Show Editable Regions",
+				"category": "DWT Guard"
+			},
+			{
+				"command": "dwtTemplateGuard.toggleProtection",
+				"title": "Toggle Protection",
+				"category": "DWT Guard"
+			},
+			{
+				"command": "dwtTemplateGuard.openPropertiesPanel",
+				"title": "Open Template Properties",
+				"category": "DWT Guard",
+				"icon": "$(symbol-property)"
+			}
+		],
+		"menus": {
+			"editor/context": [
+				{
+					"command": "dwtTemplateGuard.showEditableRegions",
+					"when": "resourceLangId == html || resourceLangId == dwt",
+					"group": "navigation"
+				},
+				{
+					"command": "dwtTemplateGuard.toggleProtection",
+					"when": "resourceLangId == html || resourceLangId == dwt",
+					"group": "navigation"
+				}
+			],
+			"editor/title/context": [
+				{
+					"command": "dwtTemplateGuard.openPropertiesPanel",
+					"when": "resourceLangId == html || resourceLangId == dwt",
+					"group": "navigation"
+				}
+			]
+		},
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "dwtTemplateGuard",
+					"title": "DWT Template Guard",
+					"icon": "media/icon.svg"
+				}
+			]
+		},
+		"views": {
+			"dwtTemplateGuard": [
+				{
+					"type": "webview",
+					"id": "dwtTemplateGuard.propertiesPanel",
+					"name": "Template Properties"
+				}
+			]
+		},
+		"configuration": {
+			"title": "Dreamweaver Template Guard",
+			"properties": {
+				"dwtTemplateGuard.enableProtection": {
+					"type": "boolean",
+					"default": true,
+					"description": "Enable edit protection for non-editable template regions."
+				},
+				"dwtTemplateGuard.enableHighlighting": {
+					"type": "boolean",
+					"default": true,
+					"description": "Enable visual highlighting (dimming) of protected regions."
+				},
+				"dwtTemplateGuard.showWarnings": {
+					"type": "boolean",
+					"default": true,
+					"description": "Show a warning message when editing in a protected region."
+				},
+				"dwtTemplateGuard.protectedRegionColor": {
+					"type": [
+						"string",
+						"null"
+					],
+					"default": null,
+					"description": "Override text color for protected regions (e.g. '#555555'). Null uses the theme-aware default."
+				},
+				"dwtTemplateGuard.protectedRegionBackgroundColor": {
+					"type": [
+						"string",
+						"null"
+					],
+					"default": null,
+					"description": "Background color for protected regions. Null for no background."
+				},
+				"dwtTemplateGuard.fileTypes": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"default": [
+						"html",
+						"htm",
+						"dwt",
+						"php",
+						"asp",
+						"csp"
+					],
+					"description": "File extensions to activate template protection for."
+				},
+				"dwtTemplateGuard.warningMessage": {
+					"type": "string",
+					"default": "This region is protected by the Dreamweaver template. Use 'Toggle Protection' to edit.",
+					"description": "Custom warning message shown when editing protected regions."
+				}
+			}
+		},
+		"configurationDefaults": {
+			"emmet.includeLanguages": {
+				"dwt": "html"
+			}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run package",
+		"compile": "npm run check-types && node esbuild.mjs",
+		"check-types": "tsc --noEmit",
+		"watch": "npm-run-all -p watch:*",
+		"watch:esbuild": "node esbuild.mjs --watch",
+		"watch:tsc": "tsc --noEmit --watch --preserveWatchOutput",
+		"package": "npm run check-types && node esbuild.mjs --production",
+		"pretest": "npm run compile",
+		"test": "vscode-test",
+		"lint": "eslint src/"
+	},
+	"devDependencies": {
+		"@types/mocha": "^10.0.0",
+		"@types/node": "^20.0.0",
+		"@types/vscode": "^1.85.0",
+		"@vscode/test-cli": "^0.0.10",
+		"@vscode/test-electron": "^2.4.0",
+		"esbuild": "^0.21.0",
+		"eslint": "^9.0.0",
+		"npm-run-all": "^4.1.5",
+		"typescript": "^5.5.0"
+	},
+	"dependencies": {
+		"@vscode/codicons": "^0.0.44"
+	}
+}

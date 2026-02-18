@@ -1,0 +1,21 @@
+# Build output
+dist/
+
+# Dependencies
+node_modules/
+
+# Lock file (optional)
+# package-lock.json
+
+# VS Code test runner cache
+.vscode-test/
+
+# macOS metadata
+.DS_Store
+
+# Source maps (generated artifacts)
+**/*.js.map
+
+# Test inputs and prompts
+test-input/
+prompts/
