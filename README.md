@@ -1,63 +1,87 @@
 # Dreamweaver Template Guard
 
-A Visual Studio Code extension that protects non-editable regions in Dreamweaver template instance files. It prevents accidental modifications to template-locked content while allowing edits only in designated editable regions.
+Ever opened a Dreamweaver template instance in VS Code, made a quick edit, and accidentally nuked the surrounding template markup?
+
+Yeeeeah. This extension puts a stop to that.
+
+It automatically detects template-locked regions in your HTML files and quietly blocks edits to them — so you can work freely inside editable regions without accidentally touching anything you shouldn't.
 
 ## Features
 
-### Edit Protection
+### 🔒 Edit Protection
 
-Template instance files (HTML pages with `<!-- InstanceBegin -->` markers) are automatically protected. Edits to locked regions are immediately reverted, and an optional warning message is shown. Template `.dwt` source files and plain HTML are freely editable.
+Open any Dreamweaver template instance (an HTML file with `<!-- InstanceBegin -->` markers) and the extension immediately cordons off the locked regions.
+
+Try to sneak an edit in there and it'll be instantly reverted — no harm done, no drama. An optional warning message will politely explain what happened.
+
+The `.dwt` template source files themselves are always freely editable, because obviously.
 
 ### Visual Highlighting
 
-- Protected (locked) regions are dimmed to look like faded comments
-- Editable region markers (`<!-- InstanceBeginEditable -->` / `<!-- InstanceEndEditable -->`) are highlighted in green italic
-- Tab and space characters are left untouched so VS Code's "Render Whitespace" indicators display normally
-- Colors adapt to light, dark, and high-contrast themes
+No more squinting at your markup trying to figure out what's safe to edit:
 
-### Template Properties Panel
+- **Locked regions** are visually dimmed — they fade back like they know they're not supposed to be touched
+- **Editable region markers** (`<!-- InstanceBeginEditable -->` / `<!-- InstanceEndEditable -->`) are highlighted in green italic, so they pop right out
+- Colors automatically adapt to light, dark, and high-contrast themes, because we don't play favorites
 
-A sidebar panel (accessible from the Activity Bar) shows all template properties for the active file:
+![Editor showing dimmed protected regions and highlighted editable markers](media/editor.png)
 
-- **Template selector** &mdash; switch between available `.dwt` templates
-- **Instance parameters** &mdash; edit text, color, boolean, number, and URL parameters with appropriate input controls (toggle switches, color swatches, etc.)
-- **Editable regions** &mdash; click to jump, copy as HTML or Markdown
-- **Template actions** &mdash; open the attached template, re-apply (update) the template, or detach from the template entirely
-- **Export** &mdash; export all editable regions as a new HTML or Markdown file
+### 🎛️ Template Properties Panel
 
-When a parameter value changes, the extension re-applies the `.dwt` template with updated values, resolving `@@(paramName)@@` expressions and `TemplateBeginIf` conditionals while preserving all editable region content.
+Remember Dreamweaver's Template Properties panel? Well, we did that too! This dedicated sidebar that gives you full control over the active file's template without ever leaving VS Code.
 
-### DWT Language Support
+To open it, simply click the **DWT Template Guard** lock icon in the Activity Bar.
 
-`.dwt` files are registered as their own language with HTML syntax highlighting. This prevents the HTML/CSS language services from flagging Dreamweaver template expressions (`@@(Division)@@`, `@@(_document['Param'])@@`) as syntax errors. Emmet support is included.
+- **Switch templates** &mdash; swap the page to a different `.dwt` file from a dropdown (great for when someone picked the wrong template three months ago)
+- **Edit parameters** &mdash; update template parameters (text, color, toggle, number, URL) with purpose-built controls like color swatches and toggle switches
+- **Jump to regions** &mdash; click any editable region in the list to navigate directly to it, or copy its content as HTML or Markdown
+- **Template actions** &mdash; open the source template, re-apply it with updated values, or detach the page from the template entirely (for when it's time to go solo)
+- **Export** &mdash; save all editable regions to a new HTML or Markdown file
+
+![Template Properties Panel showing parameters, editable regions, and template actions](media/properties-panel.png)
+
+When you update a parameter, the extension instantly re-applies the template — resolving `@@(paramName)@@` expressions and `<!-- TemplateBeginIf -->` conditionals — while leaving your editable region content completely untouched.
+
+### Full DWT Language Support
+
+`.dwt` files get treated as their own language with proper HTML syntax highlighting. Dreamweaver template expressions like `@@(Division)@@` won't trigger false syntax errors in VS Code — no more red squiggles on perfectly valid template code.
+
+Emmet abbreviations work just like they do in regular HTML files, too.
 
 ### Commands
 
-All commands are available from the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
+All commands are available from the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`), the editor right-click menu, and the editor tab context menu:
 
 | Command | Description |
 |---------|-------------|
-| **DWT Guard: Show Editable Regions** | Quick-pick list to jump to any editable region |
-| **DWT Guard: Toggle Protection** | Enable or disable edit protection |
-| **DWT Guard: Open Template Properties** | Focus the properties panel |
+| **DWT Guard: Show Editable Regions** | Pick from a list of all editable regions and jump to one |
+| **DWT Guard: Toggle Protection** | Temporarily turn protection on or off for the current file |
+| **DWT Guard: Open Template Properties** | Open the Template Properties sidebar panel |
 
-These are also available from the editor right-click context menu and the editor tab context menu for HTML and DWT files.
+## Configuration
 
-## Settings
+All settings live under **Settings → Extensions → Dreamweaver Template Guard** (or just search "DWT Guard" in VS Code settings — it's faster).
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `dwtTemplateGuard.enableProtection` | `true` | Enable edit protection for locked regions |
-| `dwtTemplateGuard.enableHighlighting` | `true` | Enable visual dimming of protected regions |
-| `dwtTemplateGuard.showWarnings` | `true` | Show a warning when editing a protected region |
-| `dwtTemplateGuard.protectedRegionColor` | `null` | Override text color for protected regions (e.g. `#555555`) |
-| `dwtTemplateGuard.protectedRegionBackgroundColor` | `null` | Background color for protected regions |
-| `dwtTemplateGuard.fileTypes` | `["html","htm","dwt","php","asp","csp"]` | File extensions to activate for |
-| `dwtTemplateGuard.warningMessage` | *(default message)* | Custom warning text for protected-region edits |
+| Enable Protection | On | Revert edits made inside locked template regions |
+| Enable Highlighting | On | Dim locked regions so editable areas stand out |
+| Show Warnings | On | Display a message when an edit is blocked |
+| Protected Region Color | *(theme default)* | Override the text color of locked regions with a custom hex value (e.g. `#555555`) |
+| Protected Region Background | *(none)* | Add a background color to locked regions |
+| Active File Types | `html, htm, dwt, php, asp, csp` | File extensions the extension keeps an eye on |
+| Warning Message | *(default)* | Customize the message shown when an edit is blocked |
 
-## Theme Colors
+## 🎨 Customizing Colors
 
-These colors can be customized in your VS Code color theme:
+Using a custom VS Code color theme? You can override the extension's highlight colors in your `settings.json`:
 
-- `dwtTemplateGuard.protectedRegionForeground` &mdash; text color for protected regions
-- `dwtTemplateGuard.markerColor` &mdash; text color for editable region marker comments
+```json
+"workbench.colorCustomizations": {
+    "dwtTemplateGuard.protectedRegionForeground": "#555555",
+    "dwtTemplateGuard.markerColor": "#2e7d32"
+}
+```
+
+- **`protectedRegionForeground`** &mdash; text color for locked/protected regions
+- **`markerColor`** &mdash; text color for the editable region marker comments

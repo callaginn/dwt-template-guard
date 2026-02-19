@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+
+<!--
+	NOTICE: This page has been detached from the site template.
+	It was originally generated from /Templates/kevin-registry.dwt but was
+	detached on 2026-01-08 to accommodate a custom multi-step form layout
+	that is incompatible with the standard template sidebar structure.
+
+	Any updates to the site-wide header, navigation, or footer must be
+	made manually on this page. Submit a change request to the Web Team
+	using Form NRDNK-IT-4 (Manual Page Update Request).
+-->
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="author" content="U.S. Department of Waterfowl Nomenclature">
+	<meta name="description" content="Register a new duck named Kevin with the National Registry">
+	<title>Register a Kevin | National Registry of Ducks Named Kevin</title>
+	<link rel="stylesheet" href="assets/css/kevin-registry.css">
+	<style>
+		:root { --accent: #1a4a7a; }
+	</style>
+</head>
+
+<body id="submit" data-division="National HQ">
+
+	<div class="gov-banner">
+		<div class="gov-banner__inner">
+			<div class="gov-banner__flag" aria-hidden="true"></div>
+			<span>An official website of the U.S. Department of Waterfowl Nomenclature</span>
+		</div>
+	</div>
+
+	<header class="site-header">
+		<div class="header-inner">
+			<div class="site-identity">
+				<p class="site-agency">U.S. Department of Waterfowl Nomenclature</p>
+				<h1 class="site-name">National Registry of Ducks Named Kevin</h1>
+				<p class="site-division">National HQ &bull; Est. 2003 &bull; Form NRDNK-001</p>
+			</div>
+			<div class="header-badge">
+				<span class="official-badge">Official U.S. Government Resource</span>
+			</div>
+		</div>
+		<nav class="site-nav" aria-label="Main navigation">
+			<ul>
+				<li><a href="index.html">Home</a></li>
+				<li><a href="registry.html">Kevin Registry</a></li>
+				<li><a href="bread-log.html">Bread Activity Log</a></li>
+				<li><a href="missing.html">Missing Kevins</a></li>
+				<li><a href="submit.html" class="active">Register a Kevin</a></li>
+				<li><a href="about.html">About NRDNK</a></li>
+			</ul>
+		</nav>
+	</header>
+
+	<div class="breadcrumb-bar">
+		<div class="breadcrumb-inner">
+			<a href="index.html">NRDNK Home</a> &rsaquo; <span>Register a Kevin &mdash; Form NRDNK-1</span>
+		</div>
+	</div>
+
+	<main class="site-main">
+		<div class="form-page">
+			<h1>Application for Initial Kevin Registration</h1>
+			<p class="form-subtitle">Form NRDNK-1 &bull; Rev. February 2026 &bull; OMB Control No. 1234-0042</p>
+
+			<div class="notice">
+				<h4>Before You Begin</h4>
+				<p>Complete all required fields (<span style="color:#c62828">&#42;</span>). Processing time is 8&ndash;12 weeks from the date the Registry receives your completed application (plus time for us to decide whether we received it). Incomplete applications will be returned with a helpful note written in a tone of quiet federal disappointment. Do not staple. Do not fold. Do not submit a duck that is not named Kevin.</p>
+			</div>
+
+			<form method="post" action="submit-process.html" novalidate>
+
+				<div class="form-section">
+					<h2>Section 1 &mdash; Duck Information</h2>
+
+					<div class="form-row">
+						<div class="form-group">
+							<label for="duck-name">Duck's Name <span class="required-mark">*</span></label>
+							<input type="text" id="duck-name" name="duck_name" value="Kevin" readonly aria-describedby="duck-name-note">
+							<span class="field-note" id="duck-name-note">Must be Kevin. If the duck is named something else, this is not the correct form.</span>
+						</div>
+						<div class="form-group">
+							<label for="duck-species">Species <span class="required-mark">*</span></label>
+							<select id="duck-species" name="duck_species">
+								<option value="">— Select species —</option>
+								<option value="mallard">Mallard (<em>Anas platyrhynchos</em>)</option>
+								<option value="pekin">Pekin Duck (<em>Anas platyrhynchos domesticus</em>)</option>
+								<option value="wood">Wood Duck (<em>Aix sponsa</em>)</option>
+								<option value="muscovy">Muscovy Duck (<em>Cairina moschata</em>)</option>
+								<option value="rouen">Rouen Duck</option>
+								<option value="other">Other (attach Form NRDNK-1S, Species Supplement)</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="form-row">
+						<div class="form-group">
+							<label for="duck-weight">Approximate Weight (lbs) <span class="required-mark">*</span></label>
+							<input type="number" id="duck-weight" name="duck_weight" min="0.5" max="30" step="0.1" placeholder="e.g. 4.2">
+						</div>
+						<div class="form-group">
+							<label for="duck-dob">Approximate Date of Birth</label>
+							<input type="date" id="duck-dob" name="duck_dob">
+							<span class="field-note">If unknown, leave blank. Do not guess. The Registry is not in the business of &ldquo;approximately vibes.&rdquo;</span>
+						</div>
+						<div class="form-group">
+							<label for="duck-sex">Sex</label>
+							<select id="duck-sex" name="duck_sex">
+								<option value="">— Unknown —</option>
+								<option value="male">Male (Drake)</option>
+								<option value="female">Female (Hen)</option>
+								<option value="unknown">Unknown / Prefers Not to Say</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="form-row">
+						<div class="form-group">
+							<label for="duck-description">Physical Description <span class="required-mark">*</span></label>
+							<textarea id="duck-description" name="duck_description" placeholder="Describe identifying features: plumage coloring, bill markings, distinctive behaviors, any prior injuries, general vibes (for the record; not legally binding)..."></textarea>
+						</div>
+					</div>
+				</div>
+
+				<div class="form-section">
+					<h2>Section 2 &mdash; Location of Record</h2>
+
+					<div class="form-row">
+						<div class="form-group">
+							<label for="habitat-name">Habitat Name / Body of Water <span class="required-mark">*</span></label>
+							<input type="text" id="habitat-name" name="habitat_name" placeholder="e.g. Central Park Pond, The Long Water at Hyde Park">
+						</div>
+					</div>
+
+					<div class="form-row">
+						<div class="form-group">
+							<label for="habitat-city">City <span class="required-mark">*</span></label>
+							<input type="text" id="habitat-city" name="habitat_city">
+						</div>
+						<div class="form-group">
+							<label for="habitat-state">State <span class="required-mark">*</span></label>
+							<select id="habitat-state" name="habitat_state">
+								<option value="">— Select —</option>
+								<option value="AL">Alabama</option>
+								<option value="AK">Alaska</option>
+								<option value="AZ">Arizona</option>
+								<option value="CA">California</option>
+								<option value="CO">Colorado</option>
+								<option value="DC">District of Columbia</option>
+								<option value="FL">Florida</option>
+								<option value="GA">Georgia</option>
+								<option value="IL">Illinois</option>
+								<option value="MA">Massachusetts</option>
+								<option value="MD">Maryland</option>
+								<option value="MI">Michigan</option>
+								<option value="MN">Minnesota</option>
+								<option value="NY">New York</option>
+								<option value="OR">Oregon</option>
+								<option value="PA">Pennsylvania</option>
+								<option value="TX">Texas</option>
+								<option value="VA">Virginia</option>
+								<option value="WA">Washington</option>
+								<option value="other">Other (see instructions)</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<label for="flyway-division">Flyway Division <span class="required-mark">*</span></label>
+							<select id="flyway-division" name="flyway_division">
+								<option value="">— Select —</option>
+								<option value="atlantic">Atlantic Flyway</option>
+								<option value="eastern">Eastern Flyway</option>
+								<option value="central">Central Flyway</option>
+								<option value="western">Western Flyway</option>
+								<option value="pacific">Pacific Flyway</option>
+								<option value="unknown">Unknown / Migratory</option>
+							</select>
+						</div>
+					</div>
+				</div>
+
+				<div class="form-section">
+					<h2>Section 3 &mdash; Bread Consumption Baseline Assessment</h2>
+
+					<div class="form-row">
+						<div class="form-group">
+							<label for="bread-tier">Initial Bread Tier Classification <span class="required-mark">*</span></label>
+							<select id="bread-tier" name="bread_tier">
+								<option value="">— Select —</option>
+								<option value="1">Tier 1 &mdash; Passive (accepts bread when offered)</option>
+								<option value="2">Tier 2 &mdash; Opportunistic (approaches humans with bread)</option>
+								<option value="3">Tier 3 &mdash; Self-Sufficient (locates bread independently)</option>
+								<option value="4">Tier 4 &mdash; Aggressive (has bumped a person for bread)</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<label for="bread-preference">Preferred Bread Type</label>
+							<input type="text" id="bread-preference" name="bread_preference" placeholder="e.g. Sourdough, White, Bagels">
+							<span class="field-note">Optional. Will not affect registration outcome.</span>
+						</div>
+					</div>
+
+					<div class="form-row">
+						<div class="form-group">
+							<label for="bread-notes">Additional Bread Observations</label>
+							<textarea id="bread-notes" name="bread_notes" placeholder="Describe any notable bread-related behaviors, incidents, or preferences that the Registry should be aware of..."></textarea>
+						</div>
+					</div>
+				</div>
+
+				<div class="form-section">
+					<h2>Section 4 &mdash; Registrant Contact Information</h2>
+
+					<div class="form-row">
+						<div class="form-group">
+							<label for="registrant-name">Your Full Name <span class="required-mark">*</span></label>
+							<input type="text" id="registrant-name" name="registrant_name">
+						</div>
+						<div class="form-group">
+							<label for="registrant-email">Email Address <span class="required-mark">*</span></label>
+							<input type="email" id="registrant-email" name="registrant_email" placeholder="you@example.com">
+						</div>
+					</div>
+
+					<div class="form-row">
+						<div class="form-group">
+							<label for="registrant-relationship">Relationship to Kevin <span class="required-mark">*</span></label>
+							<select id="registrant-relationship" name="registrant_relationship">
+								<option value="">— Select —</option>
+								<option value="owner">Owner / Keeper</option>
+								<option value="observer">Regular Observer</option>
+								<option value="park">Park / Facility Manager</option>
+								<option value="concerned">Concerned Citizen</option>
+								<option value="other">Other</option>
+							</select>
+						</div>
+					</div>
+				</div>
+
+				<div class="form-actions">
+					<button type="submit" class="btn-submit">Submit Registration Application</button>
+					<button type="reset" class="btn-reset">Clear Form</button>
+				</div>
+
+				<div class="form-legal">
+					<p><strong>Paperwork Reduction Act Notice:</strong> This collection of information is authorized by the Duck Identity Protection Act of 2003, 18 U.S.C. &sect; 1038(c). The estimated average burden for completing this form is 45 minutes, though the Registry acknowledges that the duck will not cooperate and this will take longer (45 minutes is a number we use to feel strong). Furnishing this information is voluntary, except that failure to register a Kevin within 90 days of naming constitutes a civil infraction subject to penalties. Send comments regarding the burden estimate or any other aspect of this collection to: NRDNK Forms Officer, 1 Kevin Plaza, Suite 404, Washington, D.C. 20500.</p>
+				</div>
+
+			</form>
+		</div>
+	</main>
+
+	<footer class="site-footer">
+		<div class="footer-inner">
+			<div class="footer-col">
+				<h4>National Registry of Ducks Named Kevin</h4>
+				<p>An official publication of the U.S. Department of Waterfowl Nomenclature (USDWN). All duck registrations are final. Appeals must be submitted in triplicate on Form NRDNK-Appeals-7B.</p>
+				<p>Operating under the authority of the Duck Identity Protection Act of 2003, 18 U.S.C. &sect; 1038(c).</p>
+			</div>
+			<div class="footer-col">
+				<h4>Quick Links</h4>
+				<ul>
+					<li><a href="registry.html">Browse All Kevins</a></li>
+					<li><a href="bread-log.html">Bread Consumption Logs</a></li>
+					<li><a href="missing.html">Missing Kevins Hotline</a></li>
+					<li><a href="submit.html">Register a New Kevin</a></li>
+					<li><a href="foia.html">FOIA Requests</a></li>
+				</ul>
+			</div>
+			<div class="footer-col">
+				<h4>Contact</h4>
+				<p>
+					1 Kevin Plaza, Suite 404<br>
+					Washington, D.C. 20500<br>
+					<a href="tel:18005551Kevin">1-800-555-KEVIN</a><br>
+					<a href="mailto:kevin@nrdnk.gov">kevin@nrdnk.gov</a>
+				</p>
+				<p class="footer-hours">Mon&ndash;Fri, 8:30 AM &ndash; 5:00 PM ET<br>(Closed federal holidays and migration season)</p>
+			</div>
+		</div>
+		<div class="footer-legal">
+			<p>&copy; 2026 National Registry of Ducks Named Kevin &bull; A division of the U.S. Department of Waterfowl Nomenclature &bull; All Duck Names Are Property of the Federal Government</p>
+			<p>Unauthorized use of the name &ldquo;Kevin&rdquo; for non-registered ducks is a federal offense punishable by up to $500 and mandatory enrollment in Waterfowl Awareness Training.</p>
+		</div>
+	</footer>
+
+</body>
+</html>

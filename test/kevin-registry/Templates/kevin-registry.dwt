@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="author" content="U.S. Department of Waterfowl Nomenclature">
+	<meta name="description" content="Official registry of federally recognized ducks named Kevin">
+
+	<!-- TemplateBeginEditable name="doctitle" -->
+	<title>National Registry of Ducks Named Kevin</title>
+	<!-- TemplateEndEditable -->
+
+	<link rel="stylesheet" href="../assets/css/kevin-registry.css">
+	<style>
+		:root { --accent: @@(AccentColor)@@; }
+	</style>
+
+	<!-- TemplateBeginEditable name="head" -->
+	<!-- TemplateEndEditable -->
+
+	<!-- TemplateParam name="Division" type="text" value="National HQ" -->
+	<!-- TemplateParam name="AccentColor" type="color" value="#1a4a7a" -->
+	<!-- TemplateParam name="PageID" type="text" value="home" -->
+	<!-- TemplateParam name="ShowSidebar" type="boolean" value="true" -->
+	<!-- TemplateParam name="ShowAlertBanner" type="boolean" value="false" -->
+	<!-- TemplateParam name="AlertLevel" type="text" value="amber" -->
+</head>
+
+<body id="@@(PageID)@@" data-division="@@(Division)@@">
+
+	<div class="gov-banner">
+		<div class="gov-banner__inner">
+			<div class="gov-banner__flag" aria-hidden="true"></div>
+			<span>An official website of the U.S. Department of Waterfowl Nomenclature</span>
+		</div>
+	</div>
+
+	<!-- TemplateBeginIf cond="_document['ShowAlertBanner']" -->
+	<div class="alert-banner alert-@@(AlertLevel)@@" role="alert">
+		<div class="alert-inner">
+			<span class="alert-level">&#9888; @@(AlertLevel)@@ Alert</span>
+			<!-- TemplateBeginEditable name="AlertContent" -->
+			<strong>ALERT:</strong> One or more registered Kevins cannot be accounted for. Please report any sightings to your regional office immediately.
+			<!-- TemplateEndEditable -->
+		</div>
+	</div>
+	<!-- TemplateEndIf -->
+
+	<header class="site-header">
+		<div class="header-inner">
+			<div class="site-identity">
+				<p class="site-agency">U.S. Department of Waterfowl Nomenclature</p>
+				<h1 class="site-name">National Registry of Ducks Named Kevin</h1>
+				<p class="site-division">@@(Division)@@ &bull; Est. 2003 &bull; Form NRDNK-001</p>
+			</div>
+			<div class="header-badge">
+				<span class="official-badge">Official U.S. Government Resource</span>
+			</div>
+		</div>
+		<nav class="site-nav" aria-label="Main navigation">
+			<ul>
+				<li><a href="../index.html">Home</a></li>
+				<li><a href="../registry.html">Kevin Registry</a></li>
+				<li><a href="../bread-log.html">Bread Activity Log</a></li>
+				<li><a href="../missing.html">Missing Kevins</a></li>
+				<li><a href="../submit.html">Register a Kevin</a></li>
+				<li><a href="../about.html">About NRDNK</a></li>
+			</ul>
+		</nav>
+	</header>
+
+	<div class="breadcrumb-bar">
+		<div class="breadcrumb-inner">
+			<a href="../index.html">NRDNK Home</a> &rsaquo;
+			<!-- TemplateBeginEditable name="PageHeading" -->
+			<span>Page Title</span>
+			<!-- TemplateEndEditable -->
+		</div>
+	</div>
+
+	<main class="site-main">
+		<div class="main-inner">
+
+			<!-- TemplateBeginIf cond="Division=='National HQ'" -->
+			<div class="hq-notice">
+				<strong>National HQ Portal:</strong> You are viewing the national headquarters portal. Regional statistics may differ from national totals.
+				For regional data, please contact your flyway division office.
+			</div>
+			<!-- TemplateEndIf -->
+
+			<!-- TemplateBeginEditable name="Page" -->
+			<!-- TemplateEndEditable -->
+
+			<!-- TemplateBeginIf cond="_document['ShowSidebar']" -->
+			<div class="page-layout">
+				<div class="main-column">
+					<!-- TemplateBeginEditable name="Main" -->
+					<h2>Main Content Area</h2>
+					<p>This region contains the primary page content. Replace with appropriate Kevin-related information.</p>
+					<!-- TemplateEndEditable -->
+				</div>
+				<aside class="sidebar-column">
+					<!-- TemplateBeginEditable name="Sidebar" -->
+					<div class="sidebar-widget">
+						<h3>Registry Statistics</h3>
+						<div class="widget-body">
+							<div class="widget-stat">
+								<span class="stat-value">2,847</span>
+								<span class="stat-label">Registered Kevins</span>
+							</div>
+						</div>
+					</div>
+					<!-- TemplateEndEditable -->
+				</aside>
+			</div>
+			<!-- TemplateEndIf -->
+
+		</div>
+	</main>
+
+	<footer class="site-footer">
+		<div class="footer-inner">
+			<div class="footer-col">
+				<h4>National Registry of Ducks Named Kevin</h4>
+				<p>An official publication of the U.S. Department of Waterfowl Nomenclature (USDWN). All duck registrations are final. Appeals must be submitted in triplicate on Form NRDNK-Appeals-7B.</p>
+				<p>Operating under the authority of the Duck Identity Protection Act of 2003, 18 U.S.C. &sect; 1038(c).</p>
+			</div>
+			<div class="footer-col">
+				<h4>Quick Links</h4>
+				<ul>
+					<li><a href="../registry.html">Browse All Kevins</a></li>
+					<li><a href="../bread-log.html">Bread Consumption Logs</a></li>
+					<li><a href="../missing.html">Missing Kevins Hotline</a></li>
+					<li><a href="../submit.html">Register a New Kevin</a></li>
+					<li><a href="../foia.html">FOIA Requests</a></li>
+				</ul>
+			</div>
+			<div class="footer-col">
+				<h4>Contact</h4>
+				<p>
+					1 Kevin Plaza, Suite 404<br>
+					Washington, D.C. 20500<br>
+					<a href="tel:18005551Kevin">1-800-555-KEVIN</a><br>
+					<a href="mailto:kevin@nrdnk.gov">kevin@nrdnk.gov</a>
+				</p>
+				<p class="footer-hours">Mon&ndash;Fri, 8:30 AM &ndash; 5:00 PM ET<br>(Closed federal holidays and migration season)</p>
+			</div>
+		</div>
+		<div class="footer-legal">
+			<p>&copy; 2026 National Registry of Ducks Named Kevin &bull; A division of the U.S. Department of Waterfowl Nomenclature &bull; All Duck Names Are Property of the Federal Government</p>
+			<p>Unauthorized use of the name &ldquo;Kevin&rdquo; for non-registered ducks is a federal offense punishable by up to $500 and mandatory enrollment in Waterfowl Awareness Training.</p>
+		</div>
+	</footer>
+
+	<!-- TemplateBeginEditable name="Scripts" --><!-- TemplateEndEditable -->
+
+</body>
+</html>

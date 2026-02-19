@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<!-- TemplateBeginEditable name="doctitle" -->
+	<title>National Registry of Ducks Named Kevin</title>
+	<!-- TemplateEndEditable -->
+
+	<link rel="stylesheet" href="../assets/css/kevin-registry.css">
+
+	<!-- TemplateBeginEditable name="head" -->
+	<!-- TemplateEndEditable -->
+</head>
+
+<body>
+
+	<div class="gov-banner">
+		<div class="gov-banner__inner">
+			<div class="gov-banner__flag" aria-hidden="true"></div>
+			<span>An official website of the U.S. Department of Waterfowl Nomenclature</span>
+		</div>
+	</div>
+
+	<header class="site-header">
+		<div class="header-inner">
+			<div class="site-identity">
+				<p class="site-agency">U.S. Department of Waterfowl Nomenclature</p>
+				<h1 class="site-name">National Registry of Ducks Named Kevin</h1>
+			</div>
+		</div>
+	</header>
+
+	<main class="site-main">
+		<div class="main-inner">
+			<!-- TemplateBeginEditable name="content" -->
+			<p>Page content goes here.</p>
+			<!-- TemplateEndEditable -->
+		</div>
+	</main>
+
+	<footer class="site-footer">
+		<div class="footer-legal">
+			<p>&copy; 2026 National Registry of Ducks Named Kevin &bull; U.S. Department of Waterfowl Nomenclature</p>
+		</div>
+	</footer>
+
+	<!-- TemplateBeginEditable name="Scripts" --><!-- TemplateEndEditable -->
+
+</body>
+</html>

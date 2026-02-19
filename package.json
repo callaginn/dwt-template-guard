@@ -2,7 +2,7 @@
 	"name": "dwt-template-guard",
 	"displayName": "Dreamweaver Template Guard",
 	"description": "Protect non-editable regions in Dreamweaver template files (.dwt, .html)",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"publisher": "callaginn",
 	"license": "MIT",
 	"icon": "media/icon.png",
@@ -198,7 +198,7 @@
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run package",
-		"compile": "npm run check-types && node esbuild.mjs",
+		"compile": "npm run check-types && node esbuild.mjs && tsc -p tsconfig.test.json",
 		"check-types": "tsc --noEmit",
 		"watch": "npm-run-all -p watch:*",
 		"watch:esbuild": "node esbuild.mjs --watch",
