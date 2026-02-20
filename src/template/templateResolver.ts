@@ -3,6 +3,8 @@
  * produces a resolved instance page string.  No VS Code APIs.
  */
 
+import * as path from 'path';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -20,6 +22,15 @@ export interface ResolveOptions {
 	editableContents: Map<string, string>;
 	/** Value of codeOutsideHTMLIsLocked from the InstanceBegin tag */
 	codeOutsideHTMLIsLocked: boolean;
+	/** Site-relative instance-page path, e.g. "/index.html".
+	 *  When provided, relative URLs in template regions are rewritten so
+	 *  they resolve correctly from the instance page's directory. */
+	instancePath?: string;
+	/**
+	 * Repeat region entries from the existing instance.
+	 * key = region name; value = array of entry objects (editableRegionName → content).
+	 */
+	repeatEntries?: Map<string, Map<string, string>[]>;
 }
 
 interface TemplateParamDef {
@@ -42,6 +53,19 @@ const TEMPLATE_VARIABLE_RE = /@@\(([^)]+)\)@@/g;
 
 const TEMPLATE_EDITABLE_RE =
 	/<!--\s*TemplateBeginEditable\s+name="([^"]+)"\s*-->([\s\S]*?)<!--\s*TemplateEndEditable\s*-->/g;
+
+const TEMPLATE_OPTIONAL_RE =
+	/<!--\s*TemplateBeginOptional\s+name="([^"]+)"\s*-->([\s\S]*?)<!--\s*TemplateEndOptional\s*-->/g;
+
+const TEMPLATE_REPEAT_RE =
+	/<!--\s*TemplateBeginRepeat\s+name="([^"]+)"\s*-->([\s\S]*?)<!--\s*TemplateEndRepeat\s*-->/g;
+
+/** Matches InstanceBeginEditable in a nested .dwt (child template). */
+const INSTANCE_EDITABLE_RE =
+	/<!--\s*InstanceBeginEditable\s+name="([^"]+)"\s*-->([\s\S]*?)<!--\s*InstanceEndEditable\s*-->/g;
+
+/** Detects whether a template is itself a nested instance (child template). */
+const INSTANCE_BEGIN_RE = /<!--\s*InstanceBegin\s+template="([^"]+)"/;
 
 // ---------------------------------------------------------------------------
 // TemplateParam parsing
@@ -119,6 +143,72 @@ export function evaluateCondition(
 }
 
 // ---------------------------------------------------------------------------
+// Optional region resolution
+// ---------------------------------------------------------------------------
+
+/**
+ * Process TemplateBeginOptional/TemplateEndOptional blocks.
+ * If the corresponding boolean param is true (default when absent), keep the content
+ * wrapped in InstanceBeginOptional/InstanceEndOptional markers.
+ * If false, remove the entire block.
+ */
+function resolveOptionalRegions(
+	text: string,
+	params: Map<string, string>,
+): string {
+	TEMPLATE_OPTIONAL_RE.lastIndex = 0;
+	return text.replace(
+		TEMPLATE_OPTIONAL_RE,
+		(_match, name: string, content: string) => {
+			const val = params.get(name);
+			const isVisible = val === undefined ? true : val === 'true';
+			if (!isVisible) return '';
+			return `<!-- InstanceBeginOptional name="${name}" -->${content}<!-- InstanceEndOptional -->`;
+		},
+	);
+}
+
+// ---------------------------------------------------------------------------
+// Repeat region resolution
+// ---------------------------------------------------------------------------
+
+/**
+ * Process TemplateBeginRepeat/TemplateEndRepeat blocks.
+ *
+ * If `repeatEntries` is provided for this region, generate one
+ * InstanceBeginRepeatEntry/InstanceEndRepeatEntry block per entry,
+ * substituting each entry's editable contents into the template block.
+ *
+ * If no entries are provided (e.g., new file), generate one default entry
+ * using the template's default editable region content.
+ */
+function resolveRepeatRegions(
+	text: string,
+	repeatEntries: Map<string, Map<string, string>[]>,
+): string {
+	TEMPLATE_REPEAT_RE.lastIndex = 0;
+	return text.replace(
+		TEMPLATE_REPEAT_RE,
+		(_match, name: string, templateBlock: string) => {
+			const entries = repeatEntries.get(name);
+			const entryList = entries && entries.length > 0 ? entries : [new Map<string, string>()];
+
+			const entryBlocks = entryList.map((entryContents) => {
+				// Substitute this entry's editable contents into the template block
+				const resolved = resolveEditableRegions(templateBlock, entryContents);
+				return `<!-- InstanceBeginRepeatEntry -->${resolved}<!-- InstanceEndRepeatEntry -->`;
+			});
+
+			return (
+				`<!-- InstanceBeginRepeat name="${name}" -->` +
+				entryBlocks.join('') +
+				`<!-- InstanceEndRepeat -->`
+			);
+		},
+	);
+}
+
+// ---------------------------------------------------------------------------
 // Conditional resolution
 // ---------------------------------------------------------------------------
 
@@ -185,6 +275,61 @@ function resolveEditableRegions(
 }
 
 // ---------------------------------------------------------------------------
+// Nested template instance param sync
+// ---------------------------------------------------------------------------
+
+/**
+ * Update InstanceParam values in a nested template's text to reflect the
+ * current param map (e.g. after the user changes a param value).
+ * Lines not present in `params` are left unchanged.
+ */
+function syncInstanceParams(
+	text: string,
+	params: Map<string, string>,
+	paramTypes: Map<string, string>,
+): string {
+	// Replace existing InstanceParam lines with updated values
+	text = text.replace(
+		/<!--\s*InstanceParam\s+name="([^"]+)"\s+type="([^"]+)"\s+value="([^"]*?)"\s*-->/g,
+		(_match, name: string, type: string) => {
+			const value = params.has(name) ? params.get(name)! : '';
+			const resolvedType = paramTypes.get(name) || type;
+			return `<!-- InstanceParam name="${name}" type="${resolvedType}" value="${value}" -->`;
+		},
+	);
+	return text;
+}
+
+// ---------------------------------------------------------------------------
+// Nested template editable region passthrough
+// ---------------------------------------------------------------------------
+
+/**
+ * For nested templates (a .dwt that is itself an instance of another template),
+ * the template text contains InstanceBeginEditable/InstanceEndEditable markers
+ * instead of TemplateBeginEditable/TemplateEndEditable.
+ *
+ * This function substitutes the instance page's editable contents into those
+ * markers, leaving the InstanceBeginEditable/InstanceEndEditable wrapper intact
+ * so the output is still a valid instance page.
+ */
+function resolveNestedEditableRegions(
+	text: string,
+	editableContents: Map<string, string>,
+): string {
+	INSTANCE_EDITABLE_RE.lastIndex = 0;
+	return text.replace(
+		INSTANCE_EDITABLE_RE,
+		(_match, name: string, defaultContent: string) => {
+			const content = editableContents.has(name)
+				? editableContents.get(name)!
+				: defaultContent;
+			return `<!-- InstanceBeginEditable name="${name}" -->${content}<!-- InstanceEndEditable -->`;
+		},
+	);
+}
+
+// ---------------------------------------------------------------------------
 // Instance marker insertion
 // ---------------------------------------------------------------------------
 
@@ -210,8 +355,8 @@ function insertInstanceMarkers(
 		})
 		.join('\n');
 
-	// Insert InstanceParam lines before </head>
-	text = text.replace('</head>', `${paramLines}\n</head>`);
+	// Insert InstanceParam lines before </head> (case-insensitive)
+	text = text.replace(/<\/head>/i, `${paramLines}\n</head>`);
 
 	// Insert InstanceEnd before </html>
 	text = text.replace(/<\/html>\s*$/, '<!-- InstanceEnd --></html>\n');
@@ -220,11 +365,87 @@ function insertInstanceMarkers(
 }
 
 // ---------------------------------------------------------------------------
+// Relative path rewriting
+// ---------------------------------------------------------------------------
+
+/**
+ * Regex matching HTML attributes that contain URLs.
+ * Captures: (1) attr + opening quote  (2) quote char  (3) URL value
+ */
+const ATTR_URL_RE =
+	/((?:href|src|action|poster|data|background)\s*=\s*)(["'])([^"']*?)\2/gi;
+
+/**
+ * Rewrite relative URLs in template markup so they resolve correctly from
+ * the instance page's directory rather than the template's directory.
+ *
+ * Absolute URLs, site-root-relative URLs (`/…`), fragment-only (`#…`),
+ * query-only (`?…`), protocol URLs (`http:`, `mailto:`, `tel:`, etc.),
+ * and template variable placeholders (`@@(…)@@`) are left untouched.
+ */
+export function rewriteRelativePaths(
+	text: string,
+	templatePath: string,
+	instancePath: string,
+): string {
+	const templateDir = path.posix.dirname(templatePath);
+	const instanceDir = path.posix.dirname(instancePath);
+
+	if (templateDir === instanceDir) return text;
+
+	ATTR_URL_RE.lastIndex = 0;
+	return text.replace(ATTR_URL_RE, (match, attr: string, quote: string, url: string) => {
+		// Skip URLs that don't need rewriting
+		if (
+			!url ||
+			url.startsWith('#') ||
+			url.startsWith('?') ||
+			url.startsWith('/') ||
+			/^[a-z][a-z0-9+.-]*:/i.test(url) ||
+			url.includes('@@(')
+		) {
+			return match;
+		}
+
+		// Separate the path portion from any query string / fragment
+		const splitMatch = url.match(/^([^?#]*)(.*)/);
+		if (!splitMatch || !splitMatch[1]) return match;
+		const urlPath = splitMatch[1];
+		const urlSuffix = splitMatch[2] || '';
+
+		// Resolve the URL against the template's directory to get a
+		// site-absolute path, then make it relative to the instance dir.
+		const absolute = path.posix.resolve(templateDir, urlPath);
+		const rewritten = path.posix.relative(instanceDir, absolute);
+
+		return attr + quote + rewritten + urlSuffix + quote;
+	});
+}
+
+// ---------------------------------------------------------------------------
 // Main entry point
 // ---------------------------------------------------------------------------
 
 export function resolveTemplate(options: ResolveOptions): string {
 	let text = options.templateText;
+
+	// Nested template detection: if the .dwt is itself an instance of another
+	// template, its locked regions are immutable and its editable regions are
+	// marked with InstanceBeginEditable (not TemplateBeginEditable).
+	// In this case we skip the normal template processing pipeline and just
+	// substitute the page's editable contents into the nested editable markers.
+	if (INSTANCE_BEGIN_RE.test(text)) {
+		// Rewrite relative paths if needed
+		if (options.instancePath) {
+			text = rewriteRelativePaths(text, options.templatePath, options.instancePath);
+		}
+		// Substitute the page's editable contents (or keep existing content)
+		text = resolveNestedEditableRegions(text, options.editableContents);
+		// Update the InstanceBegin marker to reflect the outermost template path
+		// (already present in text — just ensure InstanceParam lines are synced)
+		text = syncInstanceParams(text, options.params, options.paramTypes);
+		return text;
+	}
 
 	// 1. Parse TemplateParam defaults and merge with instance params
 	const templateParamDefs = parseTemplateParams(text);
@@ -254,8 +475,19 @@ export function resolveTemplate(options: ResolveOptions): string {
 	// 3. Evaluate conditionals
 	text = resolveConditionals(text, mergedParams);
 
+	// 3.5. Show/hide optional regions
+	text = resolveOptionalRegions(text, mergedParams);
+
 	// 4. Replace @@(...)@@ variables
 	text = resolveVariables(text, mergedParams);
+
+	// 4.5. Rewrite relative paths for the instance page's location
+	if (options.instancePath) {
+		text = rewriteRelativePaths(text, options.templatePath, options.instancePath);
+	}
+
+	// 4.7. Resolve repeating regions
+	text = resolveRepeatRegions(text, options.repeatEntries ?? new Map());
 
 	// 5. Replace editable regions
 	text = resolveEditableRegions(text, options.editableContents);

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ParseCache } from '../parser/dwtParser';
 import { DocumentStateTracker } from './documentStateTracker';
 import { rangeContains } from '../utils/rangeUtils';
+import { DEFAULT_FILE_TYPES } from '../constants';
 
 /**
  * Intercepts edits in protected regions and immediately reverts them
@@ -127,9 +128,7 @@ export class ProtectionEngine implements vscode.Disposable {
 
 	private isProtectedFileType(doc: vscode.TextDocument): boolean {
 		const config = vscode.workspace.getConfiguration('dwtTemplateGuard');
-		const fileTypes = config.get<string[]>('fileTypes', [
-			'html', 'htm', 'dwt', 'php', 'asp', 'csp',
-		]);
+		const fileTypes = config.get<string[]>('fileTypes', DEFAULT_FILE_TYPES);
 
 		const ext = doc.fileName.split('.').pop()?.toLowerCase();
 		return ext !== undefined && fileTypes.includes(ext);

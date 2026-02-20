@@ -16,7 +16,7 @@
 				break;
 
 			case 'update':
-				render(message.params, message.templatePath, message.editableRegions);
+				render(message.params, message.templatePath, message.editableRegions, message.optionalRegions || [], message.repeatRegions || []);
 				break;
 
 			case 'templates':
@@ -30,10 +30,16 @@
 		}
 	});
 
+	// Show loading state so we can tell the JS loaded
+	root.innerHTML = '<p class="empty-state">Loading template properties\u2026</p>';
+
+	// Notify the extension that the webview is ready to receive messages
+	vscode.postMessage({ type: 'ready' });
+
 	// Ask the extension for the template list on load
 	vscode.postMessage({ type: 'requestTemplates' });
 
-	function render(params, templatePath, editableRegions) {
+	function render(params, templatePath, editableRegions, optionalRegions, repeatRegions) {
 		let html = '';
 
 		// Template selector + actions
@@ -56,6 +62,44 @@
 			for (const param of params) {
 				html += renderParam(param);
 			}
+		}
+
+		// Optional regions (show/hide toggles for visible optional regions)
+		if (optionalRegions && optionalRegions.length > 0) {
+			html += '<div class="section-header">Optional Regions</div>';
+			for (const name of optionalRegions) {
+				// Find matching boolean param for the current value
+				const param = params && params.find((p) => p.name === name && p.type === 'boolean');
+				const checked = param ? param.value === 'true' : true;
+				const eName = escapeHtml(name);
+				html += `
+					<div class="toggle-row">
+						<label class="toggle-switch">
+							<input type="checkbox" class="param-input"
+								data-name="${eName}"
+								${checked ? 'checked' : ''}>
+							<span class="toggle-track"></span>
+						</label>
+						<span class="toggle-label optional-region-label" data-toggle-for="${eName}">${eName}</span>
+					</div>`;
+			}
+		}
+
+		// Repeating regions
+		if (repeatRegions && repeatRegions.length > 0) {
+			html += '<div class="section-header">Repeating Regions</div>';
+			html += '<ul class="regions-list">';
+			for (const region of repeatRegions) {
+				const eName = escapeHtml(region.name);
+				html += `
+					<li class="region-item repeat-region-item">
+						<span class="region-name repeat-region-name" title="${eName}">${eName}</span>
+						<span class="repeat-entry-count">${region.entryCount} entr${region.entryCount === 1 ? 'y' : 'ies'}</span>
+						<button class="region-btn repeat-btn-add" data-repeat-add="${eName}" title="Add entry"><i class="codicon codicon-add"></i></button>
+						<button class="region-btn repeat-btn-remove" data-repeat-remove="${eName}" data-repeat-index="${region.entryCount - 1}" title="Remove last entry" ${region.entryCount <= 1 ? 'disabled' : ''}><i class="codicon codicon-remove"></i></button>
+					</li>`;
+			}
+			html += '</ul>';
 		}
 
 		// Editable regions list
@@ -233,8 +277,8 @@
 			});
 		});
 
-		// Toggle label clicks
-		root.querySelectorAll('.toggle-label[data-toggle-for]').forEach((label) => {
+		// Toggle label clicks (both params and optional regions)
+		root.querySelectorAll('.toggle-label[data-toggle-for], .optional-region-label[data-toggle-for]').forEach((label) => {
 			label.addEventListener('click', () => {
 				const name = label.getAttribute('data-toggle-for');
 				const checkbox = root.querySelector(`.param-input[data-name="${CSS.escape(name)}"]`);
@@ -242,6 +286,26 @@
 					checkbox.checked = !checkbox.checked;
 					checkbox.dispatchEvent(new Event('change'));
 				}
+			});
+		});
+
+		// Repeat region add/remove buttons
+		root.querySelectorAll('.repeat-btn-add[data-repeat-add]').forEach((btn) => {
+			btn.addEventListener('click', () => {
+				vscode.postMessage({
+					type: 'addRepeatEntry',
+					regionName: btn.getAttribute('data-repeat-add'),
+				});
+			});
+		});
+
+		root.querySelectorAll('.repeat-btn-remove[data-repeat-remove]').forEach((btn) => {
+			btn.addEventListener('click', () => {
+				vscode.postMessage({
+					type: 'removeRepeatEntry',
+					regionName: btn.getAttribute('data-repeat-remove'),
+					entryIndex: parseInt(btn.getAttribute('data-repeat-index'), 10),
+				});
 			});
 		});
 

@@ -18,7 +18,7 @@ suite('DWT Parser', () => {
 	});
 
 	test('detects instance file type for .html files with InstanceBegin', async () => {
-		const doc = await openFixture('kevin-registry/about.html');
+		const doc = await openFixture('kevin-registry/about/index.html');
 		const result = parseDocument(doc);
 		assert.strictEqual(result.fileType, 'instance');
 	});
@@ -35,18 +35,18 @@ suite('DWT Parser', () => {
 		const doc = await openFixture('kevin-registry/Templates/kevin-registry.dwt');
 		const result = parseDocument(doc);
 
-		// Template has 8 editable regions: doctitle, head, AlertContent,
-		// PageHeading, Page, Main, Sidebar, Scripts
-		assert.strictEqual(result.editableRegions.length, 8);
+		// Template has 9 editable regions: doctitle, head, AlertContent,
+		// PageHeading, Page, Main, BreadEntryContent, Sidebar, Scripts
+		assert.strictEqual(result.editableRegions.length, 9);
 		assert.strictEqual(result.editableRegions[0].name, 'doctitle');
 		assert.strictEqual(result.editableRegions[1].name, 'head');
 	});
 
 	test('parses InstanceBeginEditable/InstanceEndEditable regions', async () => {
-		const doc = await openFixture('kevin-registry/about.html');
+		const doc = await openFixture('kevin-registry/about/index.html');
 		const result = parseDocument(doc);
 
-		// about.html uses ShowSidebar=false and ShowAlertBanner=false, so it
+		// about/index.html uses ShowSidebar=false and ShowAlertBanner=false, so it
 		// has 5 regions: doctitle, head, PageHeading, Page, Scripts
 		assert.strictEqual(result.editableRegions.length, 5);
 		assert.strictEqual(result.editableRegions[0].name, 'doctitle');
@@ -71,8 +71,8 @@ suite('DWT Parser', () => {
 		const doc = await openFixture('kevin-registry/Templates/kevin-registry.dwt');
 		const result = parseDocument(doc);
 
-		// 8 editable regions produce 9 protected gaps (before, 7 between, after)
-		assert.strictEqual(result.protectedRegions.length, 9);
+		// 9 editable regions produce 10 protected gaps (before, 8 between, after)
+		assert.strictEqual(result.protectedRegions.length, 10);
 
 		// First protected region should include the document declaration and begin marker
 		const firstProtected = doc.getText(result.protectedRegions[0].range);
@@ -99,8 +99,8 @@ suite('DWT Parser', () => {
 		const doc = await openFixture('kevin-registry/registry.html');
 		const result = parseDocument(doc);
 
-		// registry.html declares 6 InstanceParam tags
-		assert.strictEqual(result.instanceParams.length, 6);
+		// registry.html declares 7 InstanceParam tags
+		assert.strictEqual(result.instanceParams.length, 7);
 
 		assert.strictEqual(result.instanceParams[0].name, 'Division');
 		assert.strictEqual(result.instanceParams[0].type, 'text');
@@ -125,7 +125,7 @@ suite('DWT Parser', () => {
 	});
 
 	test('parses TemplateDeclaration', async () => {
-		const doc = await openFixture('kevin-registry/about.html');
+		const doc = await openFixture('kevin-registry/about/index.html');
 		const result = parseDocument(doc);
 
 		assert.ok(result.templateDeclaration);

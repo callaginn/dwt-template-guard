@@ -53,6 +53,38 @@ export interface ConditionalRegion {
 	fullRange: vscode.Range;
 }
 
+/** An optional region: TemplateBeginOptional/TemplateEndOptional */
+export interface OptionalRegion {
+	name: string;
+	contentRange: vscode.Range;
+	fullRange: vscode.Range;
+}
+
+/** A library item reference: #BeginLibraryItem / #EndLibraryItem */
+export interface LibraryItem {
+	path: string;
+	beginMarkerRange: vscode.Range;
+	endMarkerRange: vscode.Range;
+	contentRange: vscode.Range;
+	fullRange: vscode.Range;
+}
+
+/** A single entry within a repeating region instance. */
+export interface RepeatEntry {
+	editableRegions: EditableRegion[];
+	fullRange: vscode.Range;
+	contentRange: vscode.Range;
+}
+
+/** A repeating region in a template instance. */
+export interface RepeatRegion {
+	name: string;
+	entries: RepeatEntry[];
+	beginMarkerRange: vscode.Range;
+	endMarkerRange: vscode.Range;
+	fullRange: vscode.Range;
+}
+
 /** Complete parse result for a document. */
 export interface DwtParseResult {
 	fileType: DwtFileType;
@@ -62,4 +94,7 @@ export interface DwtParseResult {
 	instanceParams: InstanceParam[];
 	templateVariables: TemplateVariable[];
 	conditionalRegions: ConditionalRegion[];
+	optionalRegions: OptionalRegion[];
+	libraryItems: LibraryItem[];
+	repeatRegions: RepeatRegion[];
 }

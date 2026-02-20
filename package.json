@@ -1,8 +1,8 @@
 {
 	"name": "dwt-template-guard",
 	"displayName": "Dreamweaver Template Guard",
-	"description": "Protect non-editable regions in Dreamweaver template files (.dwt, .html)",
-	"version": "0.1.1",
+	"description": "Prevents edits to non-editable regions in Dreamweaver template files (.dwt, .html)",
+	"version": "0.1.7",
 	"publisher": "callaginn",
 	"license": "MIT",
 	"icon": "media/icon.png",
@@ -29,9 +29,7 @@
 		"protection"
 	],
 	"activationEvents": [
-		"onLanguage:html",
-		"onLanguage:dwt",
-		"onLanguage:php"
+		"onStartupFinished"
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
@@ -68,6 +66,16 @@
 					"DWT"
 				],
 				"configuration": "./dwt-language-configuration.json"
+			},
+			{
+				"id": "lbi",
+				"extensions": [
+					".lbi"
+				],
+				"aliases": [
+					"Dreamweaver Library Item",
+					"LBI"
+				]
 			}
 		],
 		"grammars": [
@@ -90,12 +98,40 @@
 			},
 			{
 				"command": "dwtTemplateGuard.openPropertiesPanel",
-				"title": "Open Template Properties",
+				"title": "Template Properties",
 				"category": "DWT Guard",
 				"icon": "$(symbol-property)"
+			},
+			{
+				"command": "dwtTemplateGuard.openAttachedTemplate",
+				"title": "Open Attached Template",
+				"category": "DWT Guard"
+			},
+			{
+				"command": "dwtTemplateGuard.exportInstances",
+				"title": "Export Instances to Static HTML",
+				"category": "DWT Guard"
+			},
+			{
+				"command": "dwtTemplateGuard.newFileFromTemplate",
+				"title": "New File from Template",
+				"category": "DWT Guard"
+			},
+			{
+				"command": "dwtTemplateGuard.refreshDependencyTree",
+				"title": "Refresh",
+				"category": "DWT Guard",
+				"icon": "$(refresh)"
 			}
 		],
 		"menus": {
+			"menuBar/edit": [
+				{
+					"command": "dwtTemplateGuard.openPropertiesPanel",
+					"enablement": "dwtTemplateGuard.isTemplateInstance",
+					"group": "5_dwtTemplateGuard"
+				}
+			],
 			"editor/context": [
 				{
 					"command": "dwtTemplateGuard.showEditableRegions",
@@ -112,6 +148,20 @@
 				{
 					"command": "dwtTemplateGuard.openPropertiesPanel",
 					"when": "resourceLangId == html || resourceLangId == dwt",
+					"group": "navigation"
+				}
+			],
+			"explorer/context": [
+				{
+					"command": "dwtTemplateGuard.newFileFromTemplate",
+					"when": "resourceExtname == .dwt",
+					"group": "navigation"
+				}
+			],
+			"view/title": [
+				{
+					"command": "dwtTemplateGuard.refreshDependencyTree",
+					"when": "view == dwtTemplateGuard.dependencyTree",
 					"group": "navigation"
 				}
 			]
@@ -131,6 +181,11 @@
 					"type": "webview",
 					"id": "dwtTemplateGuard.propertiesPanel",
 					"name": "Template Properties"
+				},
+				{
+					"type": "tree",
+					"id": "dwtTemplateGuard.dependencyTree",
+					"name": "Template Dependencies"
 				}
 			]
 		},
@@ -187,6 +242,11 @@
 					"type": "string",
 					"default": "This region is protected by the Dreamweaver template. Use 'Toggle Protection' to edit.",
 					"description": "Custom warning message shown when editing protected regions."
+				},
+				"dwtTemplateGuard.enableCodeLens": {
+					"type": "boolean",
+					"default": true,
+					"description": "Show 'Open Template' CodeLens above the InstanceBegin comment in template instance files."
 				}
 			}
 		},
@@ -204,6 +264,7 @@
 		"watch:esbuild": "node esbuild.mjs --watch",
 		"watch:tsc": "tsc --noEmit --watch --preserveWatchOutput",
 		"package": "npm run check-types && node esbuild.mjs --production",
+		"vsix": "vsce package --out releases/",
 		"pretest": "npm run compile",
 		"test": "vscode-test",
 		"lint": "eslint src/"

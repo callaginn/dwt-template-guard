@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { resolveTemplate, evaluateCondition } from '../../src/template/templateResolver';
+import { resolveTemplate, evaluateCondition, rewriteRelativePaths } from '../../src/template/templateResolver';
 
 // ---------------------------------------------------------------------------
 // evaluateCondition
@@ -318,5 +318,159 @@ suite('resolveTemplate', () => {
 		});
 		assert.ok(result.includes('<p>Custom promo</p>'));
 		assert.ok(result.includes('InstanceBeginEditable name="promo"'));
+	});
+});
+
+// ---------------------------------------------------------------------------
+// rewriteRelativePaths
+// ---------------------------------------------------------------------------
+
+suite('rewriteRelativePaths', () => {
+	test('rewrites href when instance is in parent directory of template', () => {
+		const html = '<a href="../index.html">Home</a>';
+		const result = rewriteRelativePaths(html, '/Templates/Test.dwt', '/index.html');
+		assert.strictEqual(result, '<a href="index.html">Home</a>');
+	});
+
+	test('rewrites src attributes', () => {
+		const html = '<link rel="stylesheet" href="../assets/css/style.css">';
+		const result = rewriteRelativePaths(html, '/Templates/Test.dwt', '/index.html');
+		assert.strictEqual(result, '<link rel="stylesheet" href="assets/css/style.css">');
+	});
+
+	test('rewrites img src', () => {
+		const html = '<img src="../images/logo.png">';
+		const result = rewriteRelativePaths(html, '/Templates/Test.dwt', '/page.html');
+		assert.strictEqual(result, '<img src="images/logo.png">');
+	});
+
+	test('rewrites script src', () => {
+		const html = '<script src="../js/app.js"></script>';
+		const result = rewriteRelativePaths(html, '/Templates/Test.dwt', '/page.html');
+		assert.strictEqual(result, '<script src="js/app.js"></script>');
+	});
+
+	test('skips absolute URLs', () => {
+		const html = '<a href="https://example.com">Link</a>';
+		const result = rewriteRelativePaths(html, '/Templates/Test.dwt', '/index.html');
+		assert.strictEqual(result, html);
+	});
+
+	test('skips site-relative URLs', () => {
+		const html = '<a href="/about.html">About</a>';
+		const result = rewriteRelativePaths(html, '/Templates/Test.dwt', '/index.html');
+		assert.strictEqual(result, html);
+	});
+
+	test('skips fragment-only URLs', () => {
+		const html = '<a href="#section">Jump</a>';
+		const result = rewriteRelativePaths(html, '/Templates/Test.dwt', '/index.html');
+		assert.strictEqual(result, html);
+	});
+
+	test('skips mailto: and tel: URLs', () => {
+		const html = '<a href="mailto:test@example.com">Email</a> <a href="tel:555-1234">Call</a>';
+		const result = rewriteRelativePaths(html, '/Templates/Test.dwt', '/index.html');
+		assert.strictEqual(result, html);
+	});
+
+	test('skips URLs containing @@(…)@@ template variables', () => {
+		const html = '<a href="@@(BaseURL)@@/page.html">Link</a>';
+		const result = rewriteRelativePaths(html, '/Templates/Test.dwt', '/index.html');
+		assert.strictEqual(result, html);
+	});
+
+	test('no-op when template and instance are in same directory', () => {
+		const html = '<a href="other.html">Link</a>';
+		const result = rewriteRelativePaths(html, '/Templates/Test.dwt', '/Templates/page.html');
+		assert.strictEqual(result, html);
+	});
+
+	test('adds ../ when instance is deeper than template target', () => {
+		// Template at /Templates/Test.dwt has href="../assets/style.css"
+		// which resolves to /assets/style.css.
+		// Instance at /pages/sub/page.html needs ../../assets/style.css
+		const html = '<link href="../assets/style.css">';
+		const result = rewriteRelativePaths(html, '/Templates/Test.dwt', '/pages/sub/page.html');
+		assert.strictEqual(result, '<link href="../../assets/style.css">');
+	});
+
+	test('preserves query strings and fragments', () => {
+		const html = '<a href="../page.html?id=1#top">Link</a>';
+		const result = rewriteRelativePaths(html, '/Templates/Test.dwt', '/index.html');
+		assert.strictEqual(result, '<a href="page.html?id=1#top">Link</a>');
+	});
+
+	test('handles single-quoted attributes', () => {
+		const html = "<a href='../index.html'>Home</a>";
+		const result = rewriteRelativePaths(html, '/Templates/Test.dwt', '/index.html');
+		assert.strictEqual(result, "<a href='index.html'>Home</a>");
+	});
+
+	test('rewrites multiple URLs in one string', () => {
+		const html = [
+			'<link href="../assets/css/style.css">',
+			'<a href="../index.html">Home</a>',
+			'<img src="../images/logo.png">',
+		].join('\n');
+		const result = rewriteRelativePaths(html, '/Templates/Test.dwt', '/index.html');
+		assert.ok(result.includes('href="assets/css/style.css"'));
+		assert.ok(result.includes('href="index.html"'));
+		assert.ok(result.includes('src="images/logo.png"'));
+	});
+});
+
+// ---------------------------------------------------------------------------
+// resolveTemplate with instancePath
+// ---------------------------------------------------------------------------
+
+suite('resolveTemplate — relative path rewriting', () => {
+	test('rewrites template paths for instance in parent directory', () => {
+		const template = [
+			'<html><head>',
+			'<link rel="stylesheet" href="../assets/style.css">',
+			'<!-- TemplateBeginEditable name="head" --><!-- TemplateEndEditable -->',
+			'</head><body>',
+			'<a href="../index.html">Home</a>',
+			'<!-- TemplateBeginEditable name="main" -->',
+			'<p>Default</p>',
+			'<!-- TemplateEndEditable -->',
+			'</body></html>',
+		].join('\n');
+
+		const result = resolveTemplate({
+			templateText: template,
+			templatePath: '/Templates/Test.dwt',
+			params: new Map(),
+			paramTypes: new Map(),
+			editableContents: new Map([
+				['head', ''],
+				['main', '<p>My content with <a href="other.html">link</a></p>'],
+			]),
+			codeOutsideHTMLIsLocked: false,
+			instancePath: '/index.html',
+		});
+
+		// Non-editable paths should be rewritten
+		assert.ok(result.includes('href="assets/style.css"'), 'CSS path should be rewritten');
+		assert.ok(result.includes('href="index.html"'), 'nav link should be rewritten');
+		// Editable content paths should be preserved as-is
+		assert.ok(result.includes('href="other.html"'), 'editable region link should be untouched');
+	});
+
+	test('does not rewrite when instancePath is not provided', () => {
+		const template = '<html><head></head><body><a href="../index.html">Home</a></body></html>';
+
+		const result = resolveTemplate({
+			templateText: template,
+			templatePath: '/Templates/Test.dwt',
+			params: new Map(),
+			paramTypes: new Map(),
+			editableContents: new Map(),
+			codeOutsideHTMLIsLocked: false,
+			// no instancePath
+		});
+
+		assert.ok(result.includes('href="../index.html"'));
 	});
 });

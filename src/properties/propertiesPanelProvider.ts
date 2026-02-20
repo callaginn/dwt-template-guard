@@ -3,8 +3,10 @@ import { ParseCache } from '../parser/dwtParser';
 import { DocumentStateTracker } from '../protection/documentStateTracker';
 import { resolveTemplate } from '../template/templateResolver';
 import { resolveTemplatePath } from '../template/templatePathResolver';
+import { deriveInstancePath, stripTemplateMarkers } from '../template/templateUpdater';
 import { htmlToMarkdown } from '../utils/htmlToMarkdown';
 import { dedentBlock } from '../utils/dedent';
+import { getNonce } from '../utils/nonce';
 
 interface PanelMessage {
 	type: string;
@@ -12,6 +14,8 @@ interface PanelMessage {
 	value?: string;
 	regionName?: string;
 	templatePath?: string;
+	entryIndex?: number;
+	direction?: 'up' | 'down';
 }
 
 export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
@@ -104,6 +108,24 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 					case 'exportAllMarkdown':
 						await this.exportAllRegions('markdown');
 						break;
+
+					case 'addRepeatEntry':
+						if (message.regionName !== undefined) {
+							await this.addRepeatEntry(message.regionName);
+						}
+						break;
+
+					case 'removeRepeatEntry':
+						if (message.regionName !== undefined && message.entryIndex !== undefined) {
+							await this.removeRepeatEntry(message.regionName, message.entryIndex);
+						}
+						break;
+
+					case 'moveRepeatEntry':
+						if (message.regionName !== undefined && message.entryIndex !== undefined && message.direction !== undefined) {
+							await this.moveRepeatEntry(message.regionName, message.entryIndex, message.direction);
+						}
+						break;
 				}
 			},
 			null,
@@ -145,7 +167,9 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 	}
 
 	private refreshPanel(): void {
-		if (!this.view || !this.view.visible) return;
+		if (!this.view || !this.view.visible) {
+			return;
+		}
 
 		const editor = vscode.window.activeTextEditor;
 		if (!editor) {
@@ -169,6 +193,11 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 			})),
 			templatePath: parseResult.templateDeclaration.templatePath,
 			editableRegions: parseResult.editableRegions.map((r) => r.name),
+			optionalRegions: parseResult.optionalRegions.map((r) => r.name),
+			repeatRegions: parseResult.repeatRegions.map((r) => ({
+				name: r.name,
+				entryCount: r.entries.length,
+			})),
 		});
 	}
 
@@ -310,6 +339,26 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 			);
 		}
 
+		const repeatEntries = new Map<string, Map<string, string>[]>();
+		for (const region of parseResult.repeatRegions) {
+			repeatEntries.set(
+				region.name,
+				region.entries.map((entry) => {
+					const m = new Map<string, string>();
+					for (const er of entry.editableRegions) {
+						m.set(er.name, editor.document.getText(er.contentRange));
+					}
+					return m;
+				}),
+			);
+		}
+
+		const instancePath = deriveInstancePath(
+			editor.document.uri,
+			templateUri,
+			parseResult.templateDeclaration.templatePath,
+		);
+
 		const resolved = resolveTemplate({
 			templateText,
 			templatePath: parseResult.templateDeclaration.templatePath,
@@ -317,6 +366,8 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 			paramTypes,
 			editableContents,
 			codeOutsideHTMLIsLocked: parseResult.templateDeclaration.codeOutsideHTMLIsLocked,
+			instancePath,
+			repeatEntries,
 		});
 
 		const uri = editor.document.uri.toString();
@@ -349,7 +400,7 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 		if (answer !== 'Detach') return;
 
 		const text = editor.document.getText();
-		const detached = this.stripTemplateMarkers(text);
+		const detached = stripTemplateMarkers(text);
 
 		const uri = editor.document.uri.toString();
 		this.stateTracker.beginProgrammaticEdit(uri);
@@ -366,23 +417,6 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 		}
 	}
 
-	private stripTemplateMarkers(text: string): string {
-		// Remove InstanceBegin comment
-		text = text.replace(/<!--\s*InstanceBegin[\s\S]*?-->/g, '');
-		// Remove InstanceParam lines (whole line if alone)
-		text = text.replace(/^[ \t]*<!--\s*InstanceParam[\s\S]*?-->[ \t]*\r?\n/gm, '');
-		// Fallback for inline InstanceParam
-		text = text.replace(/<!--\s*InstanceParam[\s\S]*?-->/g, '');
-		// Remove InstanceBeginEditable comments
-		text = text.replace(/<!--\s*InstanceBeginEditable[\s\S]*?-->/g, '');
-		// Remove InstanceEndEditable comments
-		text = text.replace(/<!--\s*InstanceEndEditable\s*-->/g, '');
-		// Remove InstanceEnd comment
-		text = text.replace(/<!--\s*InstanceEnd\s*-->/g, '');
-		// Clean up blank lines left behind
-		text = text.replace(/\n[ \t]*\n[ \t]*\n/g, '\n\n');
-		return text;
-	}
 
 	// ── Export all editable regions ──────────────────────
 
@@ -454,6 +488,26 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 			);
 		}
 
+		const repeatEntries = new Map<string, Map<string, string>[]>();
+		for (const region of parseResult.repeatRegions) {
+			repeatEntries.set(
+				region.name,
+				region.entries.map((entry) => {
+					const m = new Map<string, string>();
+					for (const er of entry.editableRegions) {
+						m.set(er.name, editor.document.getText(er.contentRange));
+					}
+					return m;
+				}),
+			);
+		}
+
+		const instancePath = deriveInstancePath(
+			editor.document.uri,
+			templateUri,
+			newTemplatePath,
+		);
+
 		const resolved = resolveTemplate({
 			templateText,
 			templatePath: newTemplatePath,
@@ -461,6 +515,8 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 			paramTypes,
 			editableContents,
 			codeOutsideHTMLIsLocked: parseResult.templateDeclaration.codeOutsideHTMLIsLocked,
+			instancePath,
+			repeatEntries,
 		});
 
 		const uri = editor.document.uri.toString();
@@ -545,6 +601,26 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 			);
 		}
 
+		const repeatEntries = new Map<string, Map<string, string>[]>();
+		for (const region of parseResult.repeatRegions) {
+			repeatEntries.set(
+				region.name,
+				region.entries.map((entry) => {
+					const m = new Map<string, string>();
+					for (const er of entry.editableRegions) {
+						m.set(er.name, editor.document.getText(er.contentRange));
+					}
+					return m;
+				}),
+			);
+		}
+
+		const instancePath = deriveInstancePath(
+			editor.document.uri,
+			templateUri,
+			parseResult.templateDeclaration.templatePath,
+		);
+
 		const resolved = resolveTemplate({
 			templateText,
 			templatePath: parseResult.templateDeclaration.templatePath,
@@ -552,6 +628,8 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 			paramTypes,
 			editableContents,
 			codeOutsideHTMLIsLocked: parseResult.templateDeclaration.codeOutsideHTMLIsLocked,
+			instancePath,
+			repeatEntries,
 		});
 
 		const fullRange = new vscode.Range(
@@ -578,6 +656,107 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 		});
 	}
 
+	// ── Repeat region entry manipulation ─────────────────
+
+	/**
+	 * Returns the full text of an InstanceBeginRepeatEntry...InstanceEndRepeatEntry block
+	 * given the repeat region name and zero-based entry index, by looking at the parse result.
+	 * If the region has no entries yet (new file), returns the raw inner template block instead.
+	 */
+	private async addRepeatEntry(regionName: string): Promise<void> {
+		const editor = vscode.window.activeTextEditor;
+		if (!editor) return;
+
+		const parseResult = this.parseCache.getOrParse(editor.document);
+		const region = parseResult.repeatRegions.find((r) => r.name === regionName);
+		if (!region) return;
+
+		if (region.entries.length === 0) return; // No entries to duplicate
+
+		// Duplicate the last entry's text
+		const lastEntry = region.entries[region.entries.length - 1];
+		const entryText = editor.document.getText(lastEntry.fullRange);
+
+		// Insert after the end of the last entry (before InstanceEndRepeat)
+		const insertPosition = lastEntry.fullRange.end;
+
+		const uri = editor.document.uri.toString();
+		this.stateTracker.beginProgrammaticEdit(uri);
+		try {
+			await editor.edit((eb) => {
+				eb.insert(insertPosition, '\n' + entryText);
+			});
+		} finally {
+			this.stateTracker.endProgrammaticEdit(uri);
+		}
+	}
+
+	private async removeRepeatEntry(regionName: string, entryIndex: number): Promise<void> {
+		const editor = vscode.window.activeTextEditor;
+		if (!editor) return;
+
+		const parseResult = this.parseCache.getOrParse(editor.document);
+		const region = parseResult.repeatRegions.find((r) => r.name === regionName);
+		if (!region || region.entries.length <= 1) return; // Keep at least one entry
+
+		const entry = region.entries[entryIndex];
+		if (!entry) return;
+
+		// Determine range to delete: the entry's full range plus the preceding newline
+		const text = editor.document.getText();
+		const entryStart = editor.document.offsetAt(entry.fullRange.start);
+		const entryEnd = editor.document.offsetAt(entry.fullRange.end);
+		// Include the newline before the entry if present
+		const deleteStart = entryStart > 0 && text[entryStart - 1] === '\n'
+			? entryStart - 1
+			: entryStart;
+
+		const deleteRange = new vscode.Range(
+			editor.document.positionAt(deleteStart),
+			entry.fullRange.end,
+		);
+
+		const uri = editor.document.uri.toString();
+		this.stateTracker.beginProgrammaticEdit(uri);
+		try {
+			await editor.edit((eb) => {
+				eb.delete(deleteRange);
+			});
+		} finally {
+			this.stateTracker.endProgrammaticEdit(uri);
+		}
+	}
+
+	private async moveRepeatEntry(regionName: string, entryIndex: number, direction: 'up' | 'down'): Promise<void> {
+		const editor = vscode.window.activeTextEditor;
+		if (!editor) return;
+
+		const parseResult = this.parseCache.getOrParse(editor.document);
+		const region = parseResult.repeatRegions.find((r) => r.name === regionName);
+		if (!region) return;
+
+		const swapIndex = direction === 'up' ? entryIndex - 1 : entryIndex + 1;
+		if (swapIndex < 0 || swapIndex >= region.entries.length) return;
+
+		const entryA = region.entries[Math.min(entryIndex, swapIndex)];
+		const entryB = region.entries[Math.max(entryIndex, swapIndex)];
+
+		const textA = editor.document.getText(entryA.fullRange);
+		const textB = editor.document.getText(entryB.fullRange);
+
+		const uri = editor.document.uri.toString();
+		this.stateTracker.beginProgrammaticEdit(uri);
+		try {
+			await editor.edit((eb) => {
+				// Replace in reverse document order to keep ranges valid
+				eb.replace(entryB.fullRange, textA);
+				eb.replace(entryA.fullRange, textB);
+			});
+		} finally {
+			this.stateTracker.endProgrammaticEdit(uri);
+		}
+	}
+
 	// ── HTML ─────────────────────────────────────────────
 
 	private getHtml(webview: vscode.Webview): string {
@@ -597,7 +776,7 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 <head>
 	<meta charset="UTF-8">
 	<meta http-equiv="Content-Security-Policy"
-		content="default-src 'none'; font-src ${webview.cspSource}; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
+		content="default-src 'none'; font-src ${webview.cspSource} data:; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link href="${codiconsUri}" rel="stylesheet">
 	<link href="${cssUri}" rel="stylesheet">
@@ -620,13 +799,4 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 			d.dispose();
 		}
 	}
-}
-
-function getNonce(): string {
-	let text = '';
-	const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-	for (let i = 0; i < 32; i++) {
-		text += chars.charAt(Math.floor(Math.random() * chars.length));
-	}
-	return text;
 }

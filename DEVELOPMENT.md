@@ -40,8 +40,6 @@ This runs two watchers concurrently:
 3. Open a Dreamweaver template instance file (HTML with `<!-- InstanceBegin -->` markers) to see the extension in action
 4. Use the Debug Console for log output
 
-Test files are available in the `test-input/` directory.
-
 ### Running Tests
 
 ```bash

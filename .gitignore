@@ -1,6 +1,9 @@
 # Build output
 dist/
 
+# Packaged extensions
+releases/
+
 # Dependencies
 node_modules/
 
@@ -16,6 +19,4 @@ node_modules/
 # Source maps (generated artifacts)
 **/*.js.map
 
-# Test inputs and prompts
-test-input/
-prompts/
+

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en"><!-- InstanceBegin template="/Templates/kevin-registry.dwt" codeOutsideHTMLIsLocked="false" -->
 
 <head>
 	<meta charset="utf-8">
@@ -7,28 +7,28 @@
 	<meta name="author" content="U.S. Department of Waterfowl Nomenclature">
 	<meta name="description" content="Official registry of federally recognized ducks named Kevin">
 
-	<!-- TemplateBeginEditable name="doctitle" -->
-	<title>National Registry of Ducks Named Kevin</title>
-	<!-- TemplateEndEditable -->
+	<!-- InstanceBeginEditable name="doctitle" -->
+	<title>Regional Field Office | National Registry of Ducks Named Kevin</title>
+	<!-- InstanceEndEditable -->
 
 	<link rel="stylesheet" href="../assets/css/kevin-registry.css">
 	<style>
-		:root { --accent: @@(AccentColor)@@; }
+		:root { --accent: #2e6b3e; }
 	</style>
 
-	<!-- TemplateBeginEditable name="head" -->
-	<!-- TemplateEndEditable -->
+	<!-- InstanceBeginEditable name="head" -->
+	<!-- InstanceEndEditable -->
 
-	<!-- TemplateParam name="Division" type="text" value="National HQ" -->
-	<!-- TemplateParam name="AccentColor" type="color" value="#1a4a7a" -->
-	<!-- TemplateParam name="PageID" type="text" value="home" -->
-	<!-- TemplateParam name="ShowSidebar" type="boolean" value="true" -->
-	<!-- TemplateParam name="ShowAlertBanner" type="boolean" value="false" -->
-	<!-- TemplateParam name="AlertLevel" type="text" value="amber" -->
-	<!-- TemplateParam name="ShowRegionalNotice" type="boolean" value="false" -->
+	<!-- InstanceParam name="Division" type="text" value="Pacific Flyway" -->
+	<!-- InstanceParam name="AccentColor" type="color" value="#2e6b3e" -->
+	<!-- InstanceParam name="PageID" type="text" value="regional" -->
+	<!-- InstanceParam name="ShowSidebar" type="boolean" value="true" -->
+	<!-- InstanceParam name="ShowAlertBanner" type="boolean" value="false" -->
+	<!-- InstanceParam name="AlertLevel" type="text" value="amber" -->
+	<!-- InstanceParam name="ShowRegionalNotice" type="boolean" value="true" -->
 </head>
 
-<body id="@@(PageID)@@" data-division="@@(Division)@@">
+<body id="regional" data-division="Pacific Flyway">
 
 	<div class="gov-banner">
 		<div class="gov-banner__inner">
@@ -37,23 +37,14 @@
 		</div>
 	</div>
 
-	<!-- TemplateBeginIf cond="_document['ShowAlertBanner']" -->
-	<div class="alert-banner alert-@@(AlertLevel)@@" role="alert">
-		<div class="alert-inner">
-			<span class="alert-level">&#9888; @@(AlertLevel)@@ Alert</span>
-			<!-- TemplateBeginEditable name="AlertContent" -->
-			<strong>ALERT:</strong> One or more registered Kevins cannot be accounted for. Please report any sightings to your regional office immediately.
-			<!-- TemplateEndEditable -->
-		</div>
-	</div>
-	<!-- TemplateEndIf -->
+
 
 	<header class="site-header">
 		<div class="header-inner">
 			<div class="site-identity">
 				<p class="site-agency">U.S. Department of Waterfowl Nomenclature</p>
 				<h1 class="site-name">National Registry of Ducks Named Kevin</h1>
-				<p class="site-division">@@(Division)@@ &bull; Est. 2003 &bull; Form NRDNK-001</p>
+				<p class="site-division">Pacific Flyway &bull; Est. 2003 &bull; Form NRDNK-001</p>
 			</div>
 			<div class="header-badge">
 				<span class="official-badge">Official U.S. Government Resource</span>
@@ -74,63 +65,59 @@
 	<div class="breadcrumb-bar">
 		<div class="breadcrumb-inner">
 			<a href="../index.html">NRDNK Home</a> &rsaquo;
-			<!-- TemplateBeginEditable name="PageHeading" -->
-			<span>Page Title</span>
-			<!-- TemplateEndEditable -->
+			<!-- InstanceBeginEditable name="PageHeading" -->
+			<span>Pacific Flyway Regional Office</span>
+			<!-- InstanceEndEditable -->
 		</div>
 	</div>
 
 	<main class="site-main">
 		<div class="main-inner">
 
-			<!-- TemplateBeginIf cond="Division=='National HQ'" -->
-			<div class="hq-notice">
-				<strong>National HQ Portal:</strong> You are viewing the national headquarters portal. Regional statistics may differ from national totals.
-				For regional data, please contact your flyway division office.
-			</div>
-			<!-- TemplateEndIf -->
 
-			<!-- TemplateBeginEditable name="Page" -->
-			<!-- TemplateEndEditable -->
 
-			<!-- TemplateBeginIf cond="_document['ShowSidebar']" -->
+			<!-- InstanceBeginEditable name="Page" -->
+			<!-- InstanceEndEditable -->
+
+
 			<div class="page-layout">
 				<div class="main-column">
-					<!-- TemplateBeginEditable name="Main" -->
-					<h2>Main Content Area</h2>
-					<p>This region contains the primary page content. Replace with appropriate Kevin-related information.</p>
-					<!-- TemplateEndEditable -->
-					<!-- TemplateBeginRepeat name="BreadEntries" -->
+					<!-- InstanceBeginEditable name="Main" -->
+					<h2>Pacific Flyway Regional Field Office</h2>
+					<p>Welcome to the Pacific Flyway Division of the National Registry of Ducks Named Kevin. This portal serves field agents and registered Kevin coordinators in the Pacific Flyway region, encompassing the western United States and portions of Canada and Mexico.</p>
+					<p>All Kevin registrations, bread consumption logs, and incident reports from the Pacific Flyway are processed through this office. For national headquarters inquiries, please contact the main NRDNK portal.</p>
+					<!-- InstanceEndEditable -->
+					<!-- InstanceBeginRepeat name="BreadEntries" --><!-- InstanceBeginRepeatEntry -->
 					<div class="bread-entry">
-						<!-- TemplateBeginEditable name="BreadEntryContent" -->
+						<!-- InstanceBeginEditable name="BreadEntryContent" -->
 						<p>Bread entry goes here.</p>
-						<!-- TemplateEndEditable -->
+						<!-- InstanceEndEditable -->
 					</div>
-					<!-- TemplateEndRepeat -->
+					<!-- InstanceEndRepeatEntry --><!-- InstanceEndRepeat -->
 				</div>
 				<aside class="sidebar-column">
-					<!-- TemplateBeginEditable name="Sidebar" -->
+					<!-- InstanceBeginEditable name="Sidebar" -->
 					<div class="sidebar-widget">
-						<h3>Registry Statistics</h3>
+						<h3>Pacific Flyway Statistics</h3>
 						<div class="widget-body">
 							<div class="widget-stat">
-								<span class="stat-value">2,847</span>
+								<span class="stat-value">312</span>
 								<span class="stat-label">Registered Kevins</span>
 							</div>
 						</div>
 					</div>
-					<!-- TemplateEndEditable -->
-					<!-- TemplateBeginOptional name="ShowRegionalNotice" -->
+					<!-- InstanceEndEditable -->
+					<!-- InstanceBeginOptional name="ShowRegionalNotice" -->
 					<div class="sidebar-widget regional-notice">
 						<h3>Regional Field Office Notice</h3>
 						<div class="widget-body">
 							<p>This page is served by a regional field office. Data may differ from the National HQ portal. Contact your flyway coordinator for discrepancies.</p>
 						</div>
 					</div>
-					<!-- TemplateEndOptional -->
+					<!-- InstanceEndOptional -->
 				</aside>
 			</div>
-			<!-- TemplateEndIf -->
+
 
 		</div>
 	</main>
@@ -169,7 +156,7 @@
 		</div>
 	</footer>
 
-	<!-- TemplateBeginEditable name="Scripts" --><!-- TemplateEndEditable -->
+	<!-- InstanceBeginEditable name="Scripts" --><!-- InstanceEndEditable -->
 
 </body>
-</html>
+<!-- InstanceEnd --></html>
