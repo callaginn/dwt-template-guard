@@ -14,6 +14,7 @@ import { stripTemplateMarkers } from './template/templateUpdater';
 import { newFileFromTemplate } from './template/newFileFromTemplate';
 import { DependencyTreeProvider } from './views/dependencyTreeProvider';
 import { LibraryItemUpdatePanel } from './library/libraryItemUpdatePanel';
+import { VisualEditorProvider } from './editor/visualEditorProvider';
 import * as path from 'path';
 import { DEFAULT_FILE_TYPES } from './constants';
 
@@ -32,11 +33,19 @@ export function activate(context: vscode.ExtensionContext): void {
 		stateTracker,
 	);
 
-	// Status bar
+	// Status bar — protection toggle
 	const statusBarItem = vscode.window.createStatusBarItem(
 		vscode.StatusBarAlignment.Right,
 		100,
 	);
+
+	// Status bar — preview server
+	const serverStatusBarItem = vscode.window.createStatusBarItem(
+		vscode.StatusBarAlignment.Right,
+		99,
+	);
+	serverStatusBarItem.command = 'dwtTemplateGuard.configurePreviewServer';
+	updateServerStatusBar(serverStatusBarItem);
 
 	// Dependency tree
 	const dependencyTreeProvider = new DependencyTreeProvider();
@@ -46,6 +55,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		protectionEngine,
 		decorationManager,
 		statusBarItem,
+		serverStatusBarItem,
 		diagnosticCollection,
 
 		vscode.window.registerWebviewViewProvider(
@@ -76,7 +86,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		),
 
 		vscode.languages.registerCodeLensProvider(
-			[{ language: 'html' }, { language: 'php' }, { language: 'dwt' }],
+			[{ language: 'html' }, { language: 'php' }, { language: 'dwt' }, { language: 'lbi' }],
 			new TemplateCodeLensProvider(parseCache),
 		),
 
@@ -90,6 +100,81 @@ export function activate(context: vscode.ExtensionContext): void {
 			(uri?: vscode.Uri) => newFileFromTemplate(uri),
 		),
 
+		vscode.window.registerCustomEditorProvider(
+			VisualEditorProvider.viewType,
+			new VisualEditorProvider(context.extensionUri, parseCache, stateTracker, propertiesProvider),
+			{
+				supportsMultipleEditorsPerDocument: true,
+				webviewOptions: { retainContextWhenHidden: true },
+			},
+		),
+
+		vscode.commands.registerCommand(
+			'dwtTemplateGuard.openVisualEditor',
+			async (uri?: vscode.Uri) => {
+				const targetUri = uri ?? vscode.window.activeTextEditor?.document.uri;
+				if (!targetUri) return;
+				await vscode.commands.executeCommand('vscode.openWith', targetUri, VisualEditorProvider.viewType);
+			},
+		),
+
+		vscode.commands.registerCommand(
+			'dwtTemplateGuard.configurePreviewServer',
+			async () => {
+				const config = vscode.workspace.getConfiguration('dwtTemplateGuard');
+				const currentUrl = config.get<string>('previewServerUrl', '').trim();
+
+				const picked = await vscode.window.showQuickPick(
+					[
+						{
+							label: '$(server) Built-in Server',
+							description: currentUrl ? '' : '(active)',
+							detail: 'The extension starts its own static file server for asset loading.',
+							value: 'builtin',
+						},
+						{
+							label: '$(globe) Custom Server URL',
+							description: currentUrl ? `(active: ${currentUrl})` : '',
+							detail: 'Route asset requests through a running local dev server.',
+							value: 'custom',
+						},
+					],
+					{ title: 'Preview Server', placeHolder: 'Select preview server mode' },
+				);
+
+				if (!picked) return;
+
+				if (picked.value === 'builtin') {
+					await config.update('previewServerUrl', '', vscode.ConfigurationTarget.Workspace);
+				} else {
+					const url = await vscode.window.showInputBox({
+						title: 'Custom Preview Server URL',
+						prompt: 'Enter the URL of your local dev server',
+						placeHolder: 'http://localhost:3000',
+						value: currentUrl,
+						validateInput: (v) => {
+							if (!v.trim()) return null; // allow clearing
+							try { new URL(v); return null; } catch { return 'Enter a valid URL'; }
+						},
+					});
+					if (url === undefined) return; // cancelled
+					await config.update('previewServerUrl', url.trim(), vscode.ConfigurationTarget.Workspace);
+				}
+
+				updateServerStatusBar(serverStatusBarItem);
+				vscode.window.showInformationMessage(
+					'Preview server setting updated. Reopen the Visual Editor to apply.',
+				);
+			},
+		),
+
+		vscode.workspace.onDidChangeConfiguration((e) => {
+			if (e.affectsConfiguration('dwtTemplateGuard.previewServerUrl')) {
+				updateServerStatusBar(serverStatusBarItem);
+			}
+		}),
+
+		dependencyTreeProvider,
 		vscode.window.registerTreeDataProvider('dwtTemplateGuard.dependencyTree', dependencyTreeProvider),
 		vscode.commands.registerCommand('dwtTemplateGuard.refreshDependencyTree', () => dependencyTreeProvider.refresh()),
 
@@ -268,6 +353,23 @@ async function exportInstancesToStaticHtml(): Promise<void> {
 			}
 		},
 	);
+}
+
+function updateServerStatusBar(item: vscode.StatusBarItem): void {
+	const url = vscode.workspace
+		.getConfiguration('dwtTemplateGuard')
+		.get<string>('previewServerUrl', '')
+		.trim();
+	if (url) {
+		let host = url;
+		try { host = new URL(url).host; } catch { /* use raw */ }
+		item.text = `$(globe) ${host}`;
+		item.tooltip = `Preview Server: ${url} (click to change)`;
+	} else {
+		item.text = '$(server) Built-in Server';
+		item.tooltip = 'Preview Server: Built-in (click to change)';
+	}
+	item.show();
 }
 
 export function deactivate(): void {

@@ -2,10 +2,8 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { DEFAULT_FILE_TYPES } from '../constants';
 
-/** Regex to extract the .lbi path from a #BeginLibraryItem marker. */
+/** Non-global regex for quick presence check (no state). */
 const BEGIN_LBI_RE = /<!--\s*#BeginLibraryItem\s+"([^"]+)"\s*-->/;
-const BEGIN_LBI_RE_G = /<!--\s*#BeginLibraryItem\s+"([^"]+)"\s*-->/g;
-const END_LBI_RE_G = /<!--\s*#EndLibraryItem\s*-->/g;
 
 export interface LibraryUpdateResult {
 	uri: vscode.Uri;
@@ -35,10 +33,10 @@ export async function findLibraryItemUsages(
 
 			// Check if any reference in this file resolves to this .lbi
 			const fullText = Buffer.from(bytes).toString('utf-8');
-			BEGIN_LBI_RE_G.lastIndex = 0;
+			const beginReG = /<!--\s*#BeginLibraryItem\s+"([^"]+)"\s*-->/g;
 			let m: RegExpExecArray | null;
 			let found = false;
-			while ((m = BEGIN_LBI_RE_G.exec(fullText)) !== null) {
+			while ((m = beginReG.exec(fullText)) !== null) {
 				// Resolve the site-relative path against workspace folders
 				const declaredPath = m[1];
 				const resolved = await resolveLbiPath(uri, declaredPath);
@@ -116,20 +114,19 @@ async function replaceMatchingLbiBlocks(
 	newContent: string,
 ): Promise<string> {
 	// We need to process all occurrences. Build a list of replacement ranges.
-	BEGIN_LBI_RE_G.lastIndex = 0;
-	END_LBI_RE_G.lastIndex = 0;
+	// Regex instances are created locally to avoid shared /g state across async calls.
+	const beginReG = /<!--\s*#BeginLibraryItem\s+"([^"]+)"\s*-->/g;
+	const endReG   = /<!--\s*#EndLibraryItem\s*-->/g;
 
 	const begins: { path: string; start: number; end: number }[] = [];
 	let m: RegExpExecArray | null;
 
-	BEGIN_LBI_RE_G.lastIndex = 0;
-	while ((m = BEGIN_LBI_RE_G.exec(text)) !== null) {
+	while ((m = beginReG.exec(text)) !== null) {
 		begins.push({ path: m[1], start: m.index, end: m.index + m[0].length });
 	}
 
 	const ends: { start: number; end: number }[] = [];
-	END_LBI_RE_G.lastIndex = 0;
-	while ((m = END_LBI_RE_G.exec(text)) !== null) {
+	while ((m = endReG.exec(text)) !== null) {
 		ends.push({ start: m.index, end: m.index + m[0].length });
 	}
 

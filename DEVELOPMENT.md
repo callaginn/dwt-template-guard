@@ -4,128 +4,57 @@
 
 - [Node.js](https://nodejs.org/) (v20 or later)
 - [Visual Studio Code](https://code.visualstudio.com/) (v1.85.0 or later)
+- [@vscode/vsce](https://github.com/microsoft/vscode-vsce) — required for packaging (`npm install -g @vscode/vsce`)
 
 ## Setup
 
 ```bash
-# Clone the repository
 git clone <repo-url>
-cd dwt-template-protector
-
-# Install dependencies
+cd dwt-template-guard
 npm install
-
-# Compile once to verify everything works
-npm run compile
+npm run check-types   # verify setup
 ```
 
-## Development Workflow
+## Development
 
-### Watch Mode
-
-Run both the TypeScript type checker and esbuild bundler in parallel, with automatic rebuilds on file changes:
-
-```bash
-npm run watch
-```
-
-This runs two watchers concurrently:
-- `watch:tsc` &mdash; TypeScript type checking (`tsc --noEmit --watch`)
-- `watch:esbuild` &mdash; esbuild bundler (`node esbuild.mjs --watch`)
-
-### Debugging
+### 1. Running Locally
 
 1. Open the project in VS Code
-2. Press **F5** to launch the Extension Development Host
-3. Open a Dreamweaver template instance file (HTML with `<!-- InstanceBegin -->` markers) to see the extension in action
-4. Use the Debug Console for log output
+2. Press **F5** to launch the Extension Development Host (a second VS Code window with your extension loaded from source)
+3. The default build task (`npm run watch`) starts automatically as a pre-launch step, so TypeScript recompiles on every save
+4. After making changes, press **Cmd+R** (or **Ctrl+R**) in the dev host window to reload and pick up the new build
+5. Use the Debug Console in the main window for log output
 
-### Running Tests
+> To run `npm run watch` standalone (e.g. in a terminal outside VS Code), it runs both `tsc --noEmit --watch` and `esbuild --watch` concurrently.
 
-```bash
-npm test
-```
-
-Tests use `@vscode/test-electron` to run inside a VS Code instance. Test files are located in `test/suite/` and fixtures in `test/fixtures/`.
-
-### Linting
+### 2. Test and Lint
 
 ```bash
+npm test    # runs tests in a VS Code instance via @vscode/test-electron
 npm run lint
 ```
 
-## Project Structure
+### 3. Build and Release
 
-```
-src/
-  extension.ts                     Entry point & activation
-  parser/
-    dwtParser.ts                   DWT file parser & cache
-    types.ts                       TypeScript interfaces
-  protection/
-    protectionEngine.ts            Edit revert logic
-    documentStateTracker.ts        Per-document state
-  decoration/
-    decorationManager.ts           Visual highlighting
-  commands/
-    showEditableRegions.ts         Quick-pick region list
-    toggleProtection.ts            Enable/disable toggle
-  properties/
-    propertiesPanelProvider.ts     Sidebar webview panel
-  template/
-    templateResolver.ts            Pure-function template engine
-    templatePathResolver.ts        Resolve template file paths
-  utils/
-    rangeUtils.ts                  Range overlap checks
-    htmlToMarkdown.ts              HTML-to-Markdown converter
+| Command | What it does |
+|---------|-------------|
+| `npm run check-types` | TypeScript type check only (no emit) |
+| `npm run vsix` | Production build + package to `releases/dwt-template-guard-x.y.z.vsix` |
+| `npm run release` | Interactive: bumps version, builds, packages, and installs the VSIX locally |
 
-media/
-  properties-panel.js              Webview frontend JS
-  properties-panel.css             Webview frontend CSS
-  icon.svg                         Extension icon
+`npm run release` is also available via **Tasks: Run Task > Release Extension** in the Command Palette.
 
-syntaxes/
-  dwt.tmLanguage.json              DWT TextMate grammar
-
-test/
-  suite/                           Test files
-  fixtures/                        Test fixture files
-```
-
-## Build & Package
-
-### Compile (development)
-
-```bash
-npm run compile
-```
-
-Runs type checking followed by esbuild bundling. Output goes to `dist/extension.js`.
-
-### Package for distribution
-
-```bash
-npm run package
-```
-
-Runs type checking followed by a production esbuild build (minified, no sourcemaps).
-
-To create a `.vsix` file for distribution:
-
-```bash
-# Install vsce if you haven't already
-npm install -g @vscode/vsce
-
-# Package the extension
-vsce package
-```
-
-The `.vscodeignore` file ensures only the compiled `dist/`, `media/`, `syntaxes/`, and config files are included in the package.
+---
 
 ## Architecture Notes
 
-- **Parse Cache** &mdash; Parse results are cached by document URI + version to avoid re-parsing on every keystroke
-- **Undo-based protection** &mdash; Protected edits are reverted using VS Code's built-in `undo` command rather than manual text manipulation
-- **Programmatic edit tracking** &mdash; The `DocumentStateTracker` flags programmatic edits (template re-application, detach) so the protection engine doesn't revert them
-- **Template resolver is pure** &mdash; `resolveTemplate()` takes strings in and returns a string out, with no VS Code API dependency, making it straightforward to test
-- **Whitespace-aware decorations** &mdash; Decorations are split into non-whitespace sub-ranges so tabs and spaces render with VS Code's default indicators
+- **Parse cache** — results cached by document URI + version to avoid re-parsing on every keystroke
+- **Undo-based protection** — protected edits are reverted via VS Code's built-in `undo` command, not manual text manipulation
+- **Programmatic edit tracking** — `DocumentStateTracker` flags programmatic edits so the protection engine doesn't revert them
+- **Pure template resolver** — `resolveTemplate()` has no VS Code API dependency, making it easy to test
+- **Whitespace-aware decorations** — decorations split into non-whitespace sub-ranges so tabs/spaces render with VS Code's default indicators
+
+## Tips
+
+- **Change the dev host project**: add a folder path to the `args` array in `.vscode/launch.json` (e.g. `"${workspaceFolder}/test/kevin-registry"`). Create multiple launch configs for quick switching from the Run and Debug dropdown.
+- **Webview CSS/JS changes** (`media/`): run **Developer: Reload Webviews** in the dev host — no recompile needed. Changes to webview *provider* code (`src/properties/`, `src/editor/`) require a full **Cmd+R** reload.

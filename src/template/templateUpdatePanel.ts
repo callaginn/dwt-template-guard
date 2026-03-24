@@ -14,6 +14,10 @@ export class TemplateUpdatePanel {
 	private readonly stateTracker: DocumentStateTracker;
 	private disposables: vscode.Disposable[] = [];
 
+	// Stored on the extension host — never round-tripped through the webview
+	private _templateUri: vscode.Uri | undefined;
+	private _templateText: string | undefined;
+
 	private constructor(
 		panel: vscode.WebviewPanel,
 		extensionUri: vscode.Uri,
@@ -29,7 +33,7 @@ export class TemplateUpdatePanel {
 			async (message) => {
 				switch (message.type) {
 					case 'update':
-						await this.handleUpdate(message.selectedFiles, message.templateData);
+						await this.handleUpdate(message.selectedFiles);
 						break;
 					case 'cancel':
 						this.panel.dispose();
@@ -85,29 +89,24 @@ export class TemplateUpdatePanel {
 			},
 		);
 
-		TemplateUpdatePanel.currentPanel = new TemplateUpdatePanel(
-			panel,
-			extensionUri,
-			stateTracker,
-		);
+		const instance = new TemplateUpdatePanel(panel, extensionUri, stateTracker);
+		instance._templateUri = templateUri;
+		instance._templateText = templateText;
+		TemplateUpdatePanel.currentPanel = instance;
 
 		panel.webview.html = TemplateUpdatePanel.currentPanel.getHtml(panel.webview);
 
 		panel.webview.postMessage({
 			type: 'init',
 			files: filePaths,
-			templateData: {
-				templateUri: templateUri.toString(),
-				templateText,
-			},
 		});
 	}
 
 	private async handleUpdate(
 		selectedFiles: { uri: string; templatePath: string }[],
-		templateData: { templateUri: string; templateText: string },
 	): Promise<void> {
-		const templateUri = vscode.Uri.parse(templateData.templateUri);
+		const templateUri = this._templateUri!;
+		const templateText = this._templateText!;
 
 		this.panel.dispose();
 
@@ -131,7 +130,7 @@ export class TemplateUpdatePanel {
 						const result = await applyTemplateToFile(
 							uri,
 							templateUri,
-							templateData.templateText,
+							templateText,
 							file.templatePath,
 						);
 						results.push(result);
@@ -145,16 +144,25 @@ export class TemplateUpdatePanel {
 					});
 				}
 
-				const succeeded = results.filter((r) => r.success).length;
+				const updated = results.filter((r) => r.success && !r.upToDate).length;
+				const upToDate = results.filter((r) => r.upToDate).length;
 				const failed = results.filter((r) => !r.success);
 
 				if (failed.length === 0) {
-					vscode.window.showInformationMessage(
-						`Updated ${succeeded} file${succeeded !== 1 ? 's' : ''} from template.`,
-					);
+					if (updated === 0 && upToDate > 0) {
+						vscode.window.showInformationMessage(
+							`All ${upToDate} file${upToDate !== 1 ? 's are' : ' is'} already up to date.`,
+						);
+					} else {
+						let msg = `Updated ${updated} file${updated !== 1 ? 's' : ''} from template.`;
+						if (upToDate > 0) {
+							msg += ` ${upToDate} already up to date.`;
+						}
+						vscode.window.showInformationMessage(msg);
+					}
 				} else {
 					vscode.window.showWarningMessage(
-						`Updated ${succeeded} file${succeeded !== 1 ? 's' : ''}. ` +
+						`Updated ${updated} file${updated !== 1 ? 's' : ''}. ` +
 						`${failed.length} failed: ${failed.map((f) => vscode.workspace.asRelativePath(f.uri)).join(', ')}`,
 					);
 				}

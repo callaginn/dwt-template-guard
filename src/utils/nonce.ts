@@ -1,9 +1,6 @@
-/** Generate a random nonce string for CSP-compliant webview scripts. */
+import { randomBytes } from 'crypto';
+
+/** Generate a cryptographically secure nonce for CSP-compliant webview scripts. */
 export function getNonce(): string {
-	let text = '';
-	const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-	for (let i = 0; i < 32; i++) {
-		text += chars.charAt(Math.floor(Math.random() * chars.length));
-	}
-	return text;
+	return randomBytes(16).toString('base64');
 }

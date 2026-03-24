@@ -6,19 +6,19 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="author" content="U.S. Department of Waterfowl Nomenclature">
 	<meta name="description" content="Official registry of federally recognized ducks named Kevin">
-
+	
 	<!-- TemplateBeginEditable name="doctitle" -->
 	<title>National Registry of Ducks Named Kevin</title>
 	<!-- TemplateEndEditable -->
-
+	
 	<link rel="stylesheet" href="../assets/css/kevin-registry.css">
 	<style>
 		:root { --accent: @@(AccentColor)@@; }
 	</style>
-
+	
 	<!-- TemplateBeginEditable name="head" -->
 	<!-- TemplateEndEditable -->
-
+	
 	<!-- TemplateParam name="Division" type="text" value="National HQ" -->
 	<!-- TemplateParam name="AccentColor" type="color" value="#1a4a7a" -->
 	<!-- TemplateParam name="PageID" type="text" value="home" -->
@@ -36,7 +36,7 @@
 			<span>An official website of the U.S. Department of Waterfowl Nomenclature</span>
 		</div>
 	</div>
-
+	
 	<!-- TemplateBeginIf cond="_document['ShowAlertBanner']" -->
 	<div class="alert-banner alert-@@(AlertLevel)@@" role="alert">
 		<div class="alert-inner">
@@ -47,7 +47,7 @@
 		</div>
 	</div>
 	<!-- TemplateEndIf -->
-
+	
 	<header class="site-header">
 		<div class="header-inner">
 			<div class="site-identity">
@@ -70,7 +70,7 @@
 			</ul>
 		</nav>
 	</header>
-
+	
 	<div class="breadcrumb-bar">
 		<div class="breadcrumb-inner">
 			<a href="../index.html">NRDNK Home</a> &rsaquo;
@@ -79,20 +79,19 @@
 			<!-- TemplateEndEditable -->
 		</div>
 	</div>
-
+	
 	<main class="site-main">
 		<div class="main-inner">
-
 			<!-- TemplateBeginIf cond="Division=='National HQ'" -->
 			<div class="hq-notice">
 				<strong>National HQ Portal:</strong> You are viewing the national headquarters portal. Regional statistics may differ from national totals.
 				For regional data, please contact your flyway division office.
 			</div>
 			<!-- TemplateEndIf -->
-
+			
 			<!-- TemplateBeginEditable name="Page" -->
 			<!-- TemplateEndEditable -->
-
+			
 			<!-- TemplateBeginIf cond="_document['ShowSidebar']" -->
 			<div class="page-layout">
 				<div class="main-column">
@@ -131,10 +130,9 @@
 				</aside>
 			</div>
 			<!-- TemplateEndIf -->
-
 		</div>
 	</main>
-
+	
 	<footer class="site-footer">
 		<div class="footer-inner">
 			<div class="footer-col">
@@ -168,8 +166,7 @@
 			<p>Unauthorized use of the name &ldquo;Kevin&rdquo; for non-registered ducks is a federal offense punishable by up to $500 and mandatory enrollment in Waterfowl Awareness Training.</p>
 		</div>
 	</footer>
-
+	
 	<!-- TemplateBeginEditable name="Scripts" --><!-- TemplateEndEditable -->
-
 </body>
 </html>

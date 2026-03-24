@@ -36,12 +36,16 @@ class InstanceTreeItem extends vscode.TreeItem {
 	}
 }
 
-export class DependencyTreeProvider implements vscode.TreeDataProvider<TreeItem> {
+export class DependencyTreeProvider implements vscode.TreeDataProvider<TreeItem>, vscode.Disposable {
 	private readonly _onDidChangeTreeData = new vscode.EventEmitter<TreeItem | undefined | void>();
 	readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
 	refresh(): void {
 		this._onDidChangeTreeData.fire();
+	}
+
+	dispose(): void {
+		this._onDidChangeTreeData.dispose();
 	}
 
 	getTreeItem(element: TreeItem): vscode.TreeItem {

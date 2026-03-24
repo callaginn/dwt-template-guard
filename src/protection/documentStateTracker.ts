@@ -3,8 +3,11 @@ import { DwtParseResult } from '../parser/types';
 interface DocumentState {
 	/** Whether we are currently reverting a blocked edit */
 	isReverting: boolean;
-	/** Whether a programmatic edit (e.g. from properties panel) is in progress */
-	isProgrammaticEdit: boolean;
+	/** Number of concurrent programmatic edits in progress (0 = none).
+	 *  A counter rather than a boolean lets overlapping async callers
+	 *  (e.g. two rapid webview write-backs) each own an independent
+	 *  begin/end pair without one caller clearing the other's flag. */
+	programmaticEditCount: number;
 	/** Last known parse result (from before the most recent edit) */
 	lastParseResult: DwtParseResult | null;
 }
@@ -21,7 +24,7 @@ export class DocumentStateTracker {
 		if (!state) {
 			state = {
 				isReverting: false,
-				isProgrammaticEdit: false,
+				programmaticEditCount: 0,
 				lastParseResult: null,
 			};
 			this.states.set(uri, state);
@@ -42,15 +45,18 @@ export class DocumentStateTracker {
 	}
 
 	beginProgrammaticEdit(uri: string): void {
-		this.getState(uri).isProgrammaticEdit = true;
+		this.getState(uri).programmaticEditCount++;
 	}
 
 	endProgrammaticEdit(uri: string): void {
-		this.getState(uri).isProgrammaticEdit = false;
+		const state = this.getState(uri);
+		if (state.programmaticEditCount > 0) {
+			state.programmaticEditCount--;
+		}
 	}
 
 	isProgrammaticEdit(uri: string): boolean {
-		return this.getState(uri).isProgrammaticEdit;
+		return this.getState(uri).programmaticEditCount > 0;
 	}
 
 	setLastParseResult(uri: string, result: DwtParseResult): void {

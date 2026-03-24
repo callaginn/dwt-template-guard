@@ -9,6 +9,8 @@ import { DEFAULT_FILE_TYPES } from '../constants';
 export interface UpdateResult {
 	uri: vscode.Uri;
 	success: boolean;
+	/** True when the resolved content was identical to the file — no write performed. */
+	upToDate?: boolean;
 	error?: string;
 }
 
@@ -184,6 +186,11 @@ export async function applyTemplateToFile(
 			instancePath,
 			repeatEntries,
 		});
+
+		// Skip the write if nothing would change
+		if (resolved === doc.getText()) {
+			return { uri: instanceUri, success: true, upToDate: true };
+		}
 
 		// Apply via WorkspaceEdit
 		const edit = new vscode.WorkspaceEdit();

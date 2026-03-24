@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.5 — 2026-03-24
+
+### Added Visual Editor and repeat region editing
+
+- **Visual Editor** — New command (`DWT Guard: Open Visual Editor`) opens a live, fully-rendered preview of the active template instance. Editable regions are directly clickable and typeable; changes write back to the source file instantly. Includes a floating rich-text toolbar (bold, italic, underline, link, headings), a head-region panel for `<head>`-scoped editables, a region indicator, and two-way source cursor sync.
+- **Repeat region reordering** — Each repeat region entry now has its own remove button and can be dragged to reorder. Previously, only a single "remove last entry" control was available.
+- **Toast notifications** — Brief inline feedback toasts in the Properties Panel confirm actions like reordering entries.
+- **Release script** — `npm run release` (or **Tasks: Release Extension**) interactively bumps the version, builds, packages to `releases/`, and installs the `.vsix` locally.
+
+---
+
 ## 0.1.7 — 2026-02-20
 
 ### Added

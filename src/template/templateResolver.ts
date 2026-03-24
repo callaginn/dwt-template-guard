@@ -347,6 +347,16 @@ function insertInstanceMarkers(
 		`$1<!-- InstanceBegin template="${templatePath}" codeOutsideHTMLIsLocked="${lockedStr}" -->`,
 	);
 
+	// Guard: if the template lacks an <html> tag the InstanceBegin marker was
+	// never inserted, which produces an invalid instance file. Fail loudly
+	// rather than silently returning a broken document.
+	if (!text.includes('<!-- InstanceBegin')) {
+		throw new Error(
+			`Template "${templatePath}" does not contain an <html> tag. ` +
+			'Cannot create a template instance from a partial HTML document.',
+		);
+	}
+
 	// Build InstanceParam block — maintain the order from the params map
 	const paramLines = Array.from(params.entries())
 		.map(([name, value]) => {
@@ -500,6 +510,11 @@ export function resolveTemplate(options: ResolveOptions): string {
 		mergedParams,
 		mergedTypes,
 	);
+
+	// 7. Strip trailing whitespace from otherwise-blank lines.
+	//    The template source often has indented blank lines (e.g. "\t\n")
+	//    that don't match the clean empty lines in saved instance files.
+	text = text.replace(/^[ \t]+$/gm, '');
 
 	return text;
 }

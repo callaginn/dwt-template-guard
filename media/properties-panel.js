@@ -27,6 +27,10 @@
 			case 'copied':
 				showCopiedFeedback(message.regionName, message.format);
 				break;
+
+			case 'toast':
+				showToast(message.message, message.variant || 'success');
+				break;
 		}
 	});
 
@@ -93,10 +97,21 @@
 				const eName = escapeHtml(region.name);
 				html += `
 					<li class="region-item repeat-region-item">
-						<span class="region-name repeat-region-name" title="${eName}">${eName}</span>
-						<span class="repeat-entry-count">${region.entryCount} entr${region.entryCount === 1 ? 'y' : 'ies'}</span>
-						<button class="region-btn repeat-btn-add" data-repeat-add="${eName}" title="Add entry"><i class="codicon codicon-add"></i></button>
-						<button class="region-btn repeat-btn-remove" data-repeat-remove="${eName}" data-repeat-index="${region.entryCount - 1}" title="Remove last entry" ${region.entryCount <= 1 ? 'disabled' : ''}><i class="codicon codicon-remove"></i></button>
+						<div class="repeat-region-header">
+							<span class="region-name repeat-region-name" title="${eName}">${eName}</span>
+							<button class="region-btn repeat-btn-add" data-repeat-add="${eName}" title="Add entry"><i class="codicon codicon-add"></i></button>
+						</div>
+						<ul class="repeat-entries-list" data-repeat-region="${eName}">`;
+				for (let i = 0; i < region.entryCount; i++) {
+					html += `
+							<li class="repeat-entry-row" draggable="true" data-region="${eName}" data-entry-index="${i}">
+								<span class="repeat-drag-handle" title="Drag to reorder">⠿</span>
+								<span class="repeat-entry-label">Entry ${i + 1}</span>
+								<button class="region-btn repeat-entry-remove" data-repeat-remove="${eName}" data-repeat-index="${i}" title="Remove entry" ${region.entryCount <= 1 ? 'disabled' : ''}><i class="codicon codicon-remove"></i></button>
+							</li>`;
+				}
+				html += `
+						</ul>
 					</li>`;
 			}
 			html += '</ul>';
@@ -289,7 +304,7 @@
 			});
 		});
 
-		// Repeat region add/remove buttons
+		// Repeat region: add entry buttons
 		root.querySelectorAll('.repeat-btn-add[data-repeat-add]').forEach((btn) => {
 			btn.addEventListener('click', () => {
 				vscode.postMessage({
@@ -299,13 +314,59 @@
 			});
 		});
 
-		root.querySelectorAll('.repeat-btn-remove[data-repeat-remove]').forEach((btn) => {
+		// Repeat region: per-entry remove buttons
+		root.querySelectorAll('.repeat-entry-remove[data-repeat-remove]').forEach((btn) => {
 			btn.addEventListener('click', () => {
 				vscode.postMessage({
 					type: 'removeRepeatEntry',
 					regionName: btn.getAttribute('data-repeat-remove'),
 					entryIndex: parseInt(btn.getAttribute('data-repeat-index'), 10),
 				});
+			});
+		});
+
+		// Repeat region: drag-and-drop to reorder entries
+		let dragSourceIndex = -1;
+		let dragSourceRegion = '';
+
+		root.querySelectorAll('.repeat-entry-row').forEach((row) => {
+			row.addEventListener('dragstart', (e) => {
+				dragSourceIndex = parseInt(row.getAttribute('data-entry-index'), 10);
+				dragSourceRegion = row.getAttribute('data-region');
+				e.dataTransfer.effectAllowed = 'move';
+				row.classList.add('drag-dragging');
+			});
+
+			row.addEventListener('dragend', () => {
+				root.querySelectorAll('.repeat-entry-row').forEach((r) => {
+					r.classList.remove('drag-dragging', 'drag-over');
+				});
+			});
+
+			row.addEventListener('dragover', (e) => {
+				e.preventDefault();
+				e.dataTransfer.dropEffect = 'move';
+				root.querySelectorAll('.repeat-entry-row').forEach((r) => r.classList.remove('drag-over'));
+				row.classList.add('drag-over');
+			});
+
+			row.addEventListener('dragleave', () => {
+				row.classList.remove('drag-over');
+			});
+
+			row.addEventListener('drop', (e) => {
+				e.preventDefault();
+				row.classList.remove('drag-over');
+				const toIndex = parseInt(row.getAttribute('data-entry-index'), 10);
+				const toRegion = row.getAttribute('data-region');
+				if (toRegion === dragSourceRegion && toIndex !== dragSourceIndex) {
+					vscode.postMessage({
+						type: 'moveRepeatEntry',
+						regionName: dragSourceRegion,
+						fromIndex: dragSourceIndex,
+						toIndex,
+					});
+				}
 			});
 		});
 
@@ -367,6 +428,22 @@
 			btn.classList.remove('copied');
 			btn.innerHTML = original;
 		}, 1200);
+	}
+
+	let toastTimer;
+	function showToast(message, variant) {
+		let el = document.getElementById('dwt-toast');
+		if (!el) {
+			el = document.createElement('div');
+			el.id = 'dwt-toast';
+			el.setAttribute('role', 'status');
+			document.body.appendChild(el);
+		}
+		el.className = `toast toast--${variant}`;
+		el.innerHTML = `<i class="codicon codicon-check"></i> ${escapeHtml(message)}`;
+		clearTimeout(toastTimer);
+		requestAnimationFrame(() => { el.classList.add('toast--visible'); });
+		toastTimer = setTimeout(() => { el.classList.remove('toast--visible'); }, 2500);
 	}
 
 	function isValidColor(str) {

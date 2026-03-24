@@ -78,15 +78,23 @@ export async function newFileFromTemplate(templateArg?: vscode.Uri): Promise<voi
 	const instancePath = deriveInstancePath(saveUri, templateUri, templatePath);
 
 	// Resolve template with empty editable contents (use template defaults)
-	const resolved = resolveTemplate({
-		templateText,
-		templatePath,
-		params,
-		paramTypes,
-		editableContents: new Map(),
-		codeOutsideHTMLIsLocked: true,
-		instancePath,
-	});
+	let resolved: string;
+	try {
+		resolved = resolveTemplate({
+			templateText,
+			templatePath,
+			params,
+			paramTypes,
+			editableContents: new Map(),
+			codeOutsideHTMLIsLocked: true,
+			instancePath,
+		});
+	} catch (err) {
+		vscode.window.showErrorMessage(
+			`Could not create file from template: ${err instanceof Error ? err.message : String(err)}`,
+		);
+		return;
+	}
 
 	// Write file and open it
 	await vscode.workspace.fs.writeFile(saveUri, Buffer.from(resolved, 'utf-8'));

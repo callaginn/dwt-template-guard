@@ -1,0 +1,219 @@
+/* ── Visual Editor: Webview Shell ─────────────────── */
+
+body {
+	margin: 0;
+	padding: 0;
+	background: #fff;
+	color: #000;
+}
+
+/* ── Floating Toolbar ────────────────────────────── */
+
+#toolbar {
+	position: fixed;
+	z-index: 10000;
+	display: none;
+	align-items: center;
+	gap: 2px;
+	padding: 4px 6px;
+	background: var(--vscode-editorWidget-background, #252526);
+	border: 1px solid var(--vscode-editorWidget-border, #454545);
+	border-radius: 6px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+	color: var(--vscode-foreground, #ccc);
+	font-family: var(--vscode-font-family);
+	font-size: var(--vscode-font-size, 13px);
+	pointer-events: auto;
+}
+
+#toolbar.visible {
+	display: flex;
+}
+
+.toolbar-group {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	padding: 0 4px;
+}
+
+.toolbar-group + .toolbar-group {
+	border-left: 1px solid var(--vscode-editorWidget-border, #454545);
+}
+
+
+.toolbar-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	background: none;
+	border: none;
+	border-radius: 3px;
+	color: var(--vscode-foreground, #ccc);
+	cursor: pointer;
+}
+
+.toolbar-btn svg {
+	flex-shrink: 0;
+}
+
+.toolbar-btn:hover {
+	background: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.1));
+}
+
+.toolbar-select {
+	padding: 4px 8px;
+	background: var(--vscode-dropdown-background, #3c3c3c);
+	color: var(--vscode-dropdown-foreground, #ccc);
+	border: 1px solid var(--vscode-dropdown-border, #555);
+	border-radius: 3px;
+	font-family: inherit;
+	font-size: inherit;
+}
+
+/* ── Panel header ────────────────────────────────── */
+
+/* ── Head regions panel ──────────────────────────── */
+
+#head-regions {
+	background: var(--vscode-editor-background, #1e1e1e);
+	border-bottom: 1px solid var(--vscode-panel-border, #333);
+	font-family: var(--vscode-font-family);
+	font-size: var(--vscode-font-size, 13px);
+	color: var(--vscode-foreground, #ccc);
+}
+
+#head-regions:empty {
+	display: none;
+}
+
+#head-regions details {
+	margin: 0;
+}
+
+#head-regions summary {
+	padding: 6px 12px;
+	cursor: pointer;
+	user-select: none;
+	font-weight: 600;
+	font-size: 0.85em;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	opacity: 0.8;
+}
+
+#head-regions summary:hover {
+	opacity: 1;
+}
+
+.head-region-field {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 12px 6px;
+}
+
+.head-region-field label {
+	min-width: 80px;
+	font-size: 0.85em;
+	opacity: 0.7;
+}
+
+.head-region-field input,
+.head-region-field textarea {
+	flex: 1;
+	padding: 4px 8px;
+	background: var(--vscode-input-background, #3c3c3c);
+	color: var(--vscode-input-foreground, #ccc);
+	border: 1px solid var(--vscode-input-border, #555);
+	border-radius: 3px;
+	font-family: inherit;
+	font-size: inherit;
+}
+
+.head-region-field textarea {
+	min-height: 60px;
+	resize: vertical;
+}
+
+.head-region-field input:focus,
+.head-region-field textarea:focus {
+	outline: none;
+	border-color: var(--vscode-focusBorder, #007acc);
+}
+
+/* ── Editor container ────────────────────────────── */
+
+#editor-container {
+	min-height: 100vh;
+}
+
+/* ── Editable region styling ─────────────────────── */
+
+dwt-region {
+	display: block;
+	position: relative;
+	outline: 2px dashed rgba(0, 120, 212, 0.35);
+	outline-offset: 2px;
+	min-height: 24px;
+	transition: outline-color 0.15s;
+}
+
+dwt-region:hover {
+	outline-color: rgba(0, 120, 212, 0.6);
+}
+
+dwt-region:focus,
+dwt-region:focus-within,
+dwt-region.dwt-region--active {
+	outline-color: rgba(0, 120, 212, 1);
+	outline-style: solid;
+}
+
+/* Region label badge */
+.dwt-region-label {
+	position: absolute;
+	top: -18px;
+	left: 4px;
+	font-size: 10px;
+	font-family: var(--vscode-font-family, monospace);
+	color: #fff;
+	background: rgba(0, 120, 212, 0.85);
+	padding: 1px 6px;
+	border-radius: 2px 2px 0 0;
+	pointer-events: none;
+	white-space: nowrap;
+	z-index: 1;
+	opacity: 0;
+	transition: opacity 0.15s;
+}
+
+dwt-region:hover .dwt-region-label,
+dwt-region:focus .dwt-region-label,
+dwt-region:focus-within .dwt-region-label,
+dwt-region.dwt-region--active .dwt-region-label {
+	opacity: 1;
+}
+
+/* ── Region indicator (bottom bar) ───────────────── */
+
+#region-indicator {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	padding: 4px 12px;
+	background: var(--vscode-statusBar-background, #007acc);
+	color: var(--vscode-statusBar-foreground, #fff);
+	font-family: var(--vscode-font-family);
+	font-size: 12px;
+	transform: translateY(100%);
+	transition: transform 0.15s;
+	z-index: 10000;
+}
+
+#region-indicator.visible {
+	transform: translateY(0);
+}

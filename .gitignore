@@ -19,4 +19,5 @@ node_modules/
 # Source maps (generated artifacts)
 **/*.js.map
 
-
+# AI Prompts
+/prompts

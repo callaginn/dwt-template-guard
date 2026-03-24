@@ -14,6 +14,10 @@ export class LibraryItemUpdatePanel {
 	private readonly stateTracker: DocumentStateTracker;
 	private disposables: vscode.Disposable[] = [];
 
+	// Stored on the extension host — never round-tripped through the webview
+	private _lbiUri: vscode.Uri | undefined;
+	private _lbiText: string | undefined;
+
 	private constructor(
 		panel: vscode.WebviewPanel,
 		extensionUri: vscode.Uri,
@@ -29,7 +33,7 @@ export class LibraryItemUpdatePanel {
 			async (message) => {
 				switch (message.type) {
 					case 'update':
-						await this.handleUpdate(message.selectedFiles, message.templateData);
+						await this.handleUpdate(message.selectedFiles);
 						break;
 					case 'cancel':
 						this.panel.dispose();
@@ -78,30 +82,24 @@ export class LibraryItemUpdatePanel {
 			},
 		);
 
-		LibraryItemUpdatePanel.currentPanel = new LibraryItemUpdatePanel(
-			panel,
-			extensionUri,
-			stateTracker,
-		);
+		const instance = new LibraryItemUpdatePanel(panel, extensionUri, stateTracker);
+		instance._lbiUri = lbiUri;
+		instance._lbiText = lbiText;
+		LibraryItemUpdatePanel.currentPanel = instance;
 
 		panel.webview.html = LibraryItemUpdatePanel.currentPanel.getHtml(panel.webview);
 
 		panel.webview.postMessage({
 			type: 'init',
 			files: filePaths,
-			templateData: {
-				templateUri: lbiUri.toString(),
-				templateText: lbiText,
-			},
 		});
 	}
 
 	private async handleUpdate(
 		selectedFiles: { uri: string; templatePath: string }[],
-		templateData: { templateUri: string; templateText: string },
 	): Promise<void> {
-		const lbiUri = vscode.Uri.parse(templateData.templateUri);
-		const lbiText = templateData.templateText;
+		const lbiUri = this._lbiUri!;
+		const lbiText = this._lbiText!;
 
 		this.panel.dispose();
 

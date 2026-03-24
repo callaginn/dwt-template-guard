@@ -116,10 +116,19 @@ export class ProtectionEngine implements vscode.Disposable {
 		this.stateTracker.beginRevert(uri);
 
 		try {
-			// Verify the active editor matches before undoing
+			// executeCommand('undo') only applies to the active editor — it cannot
+			// revert changes to background documents (e.g. from Find & Replace across
+			// files). When that happens we warn the user so they can undo manually.
 			const activeEditor = vscode.window.activeTextEditor;
 			if (activeEditor && activeEditor.document.uri.toString() === uri) {
 				await vscode.commands.executeCommand('undo');
+			} else {
+				const config = vscode.workspace.getConfiguration('dwtTemplateGuard');
+				if (config.get<boolean>('showWarnings', true)) {
+					vscode.window.showWarningMessage(
+						'A protected region was modified in a background file and could not be automatically reverted. Please undo that change manually.',
+					);
+				}
 			}
 		} finally {
 			this.stateTracker.endRevert(uri);

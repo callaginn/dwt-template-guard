@@ -15,6 +15,8 @@ interface PanelMessage {
 	regionName?: string;
 	templatePath?: string;
 	entryIndex?: number;
+	fromIndex?: number;
+	toIndex?: number;
 	direction?: 'up' | 'down';
 }
 
@@ -24,6 +26,81 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 	private view?: vscode.WebviewView;
 	private disposables: vscode.Disposable[] = [];
 	private refreshTimeout: ReturnType<typeof setTimeout> | undefined;
+	private pinnedDocumentUri: vscode.Uri | undefined;
+
+	private visualEditor?: import('../editor/visualEditorSession').VisualEditorSession;
+
+	/** Called by the Visual Editor to register/unregister itself. */
+	public setVisualEditor(editor: import('../editor/visualEditorSession').VisualEditorSession | undefined): void {
+		this.visualEditor = editor;
+	}
+
+	/** If the visual editor is open for the given URI, refresh it immediately. */
+	private notifyVisualEditor(uri: vscode.Uri): void {
+		if (this.visualEditor && this.visualEditor.uri.toString() === uri.toString()) {
+			this.visualEditor.requestRefresh();
+		}
+	}
+
+	/** Called by the Visual Editor when its panel becomes active. */
+	public pinDocument(uri: vscode.Uri): void {
+		this.pinnedDocumentUri = uri;
+		this.scheduleRefresh();
+	}
+
+	/** Called by the Visual Editor when its panel loses focus or is disposed. */
+	public unpinDocument(): void {
+		this.pinnedDocumentUri = undefined;
+		this.scheduleRefresh();
+	}
+
+	/**
+	 * Returns the best available TextEditor for the current context:
+	 * the active text editor if one exists, otherwise the first visible
+	 * text editor for the pinned document (e.g. when the Visual Editor
+	 * panel is focused instead of the source file).
+	 */
+	private getEffectiveEditor(): vscode.TextEditor | undefined {
+		const active = vscode.window.activeTextEditor;
+		if (active) {
+			return active;
+		}
+		if (this.pinnedDocumentUri) {
+			return vscode.window.visibleTextEditors.find(
+				(e) => e.document.uri.toString() === this.pinnedDocumentUri!.toString(),
+			);
+		}
+		return undefined;
+	}
+
+	/**
+	 * Returns the document URI for the current context — from the active
+	 * text editor or the pinned document (visual editor).
+	 */
+	private getEffectiveDocumentUri(): vscode.Uri | undefined {
+		return vscode.window.activeTextEditor?.document.uri ?? this.pinnedDocumentUri;
+	}
+
+	/**
+	 * Opens (or retrieves) the effective document and parses it.
+	 * Works even when no TextEditor is visible (e.g. visual editor only).
+	 */
+	private async getDocumentAndParse(): Promise<
+		{ doc: vscode.TextDocument; parseResult: ReturnType<ParseCache['getOrParse']> } | undefined
+	> {
+		const uri = this.getEffectiveDocumentUri();
+		if (!uri) return undefined;
+
+		let doc: vscode.TextDocument;
+		try {
+			doc = await vscode.workspace.openTextDocument(uri);
+		} catch {
+			return undefined;
+		}
+		const parseResult = this.parseCache.getOrParse(doc);
+		if (!parseResult) return undefined;
+		return { doc, parseResult };
+	}
 
 	constructor(
 		private readonly extensionUri: vscode.Uri,
@@ -122,8 +199,8 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 						break;
 
 					case 'moveRepeatEntry':
-						if (message.regionName !== undefined && message.entryIndex !== undefined && message.direction !== undefined) {
-							await this.moveRepeatEntry(message.regionName, message.entryIndex, message.direction);
+						if (message.regionName !== undefined && message.fromIndex !== undefined && message.toIndex !== undefined) {
+							await this.moveRepeatEntry(message.regionName, message.fromIndex, message.toIndex);
 						}
 						break;
 				}
@@ -144,8 +221,10 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 				this.scheduleRefresh();
 			}),
 			vscode.workspace.onDidChangeTextDocument((event) => {
-				const editor = vscode.window.activeTextEditor;
-				if (editor && editor.document === event.document) {
+				const editor = this.getEffectiveEditor();
+				const isPinnedDoc = this.pinnedDocumentUri &&
+					event.document.uri.toString() === this.pinnedDocumentUri.toString();
+				if ((editor && editor.document === event.document) || isPinnedDoc) {
 					this.scheduleRefresh();
 				}
 			}),
@@ -166,18 +245,34 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 		}, 50);
 	}
 
-	private refreshPanel(): void {
+	private async refreshPanel(): Promise<void> {
 		if (!this.view || !this.view.visible) {
 			return;
 		}
 
-		const editor = vscode.window.activeTextEditor;
-		if (!editor) {
+		const editor = this.getEffectiveEditor();
+		let doc: vscode.TextDocument | undefined =
+			editor?.document ??
+			vscode.workspace.textDocuments.find(
+				(d) => d.uri.toString() === this.pinnedDocumentUri?.toString(),
+			);
+
+		// When the Visual Editor is open without the source tab, the document
+		// won't be in textDocuments. Load it into memory without showing a tab.
+		if (!doc && this.pinnedDocumentUri) {
+			try {
+				doc = await vscode.workspace.openTextDocument(this.pinnedDocumentUri);
+			} catch {
+				// File may have been deleted — fall through to 'clear'
+			}
+		}
+
+		if (!doc) {
 			this.view.webview.postMessage({ type: 'clear' });
 			return;
 		}
 
-		const parseResult = this.parseCache.getOrParse(editor.document);
+		const parseResult = this.parseCache.getOrParse(doc);
 		// Only show the panel for instance files (files with a template declaration)
 		if (!parseResult || parseResult.fileType === 'none' || !parseResult.templateDeclaration) {
 			this.view.webview.postMessage({ type: 'clear' });
@@ -204,7 +299,7 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 	// ── Jump to editable region ──────────────────────────
 
 	private jumpToRegion(regionName: string): void {
-		const editor = vscode.window.activeTextEditor;
+		const editor = this.getEffectiveEditor();
 		if (!editor) return;
 
 		const parseResult = this.parseCache.getOrParse(editor.document);
@@ -224,15 +319,16 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 		regionName: string,
 		format: 'html' | 'markdown',
 	): Promise<void> {
-		const editor = vscode.window.activeTextEditor;
-		if (!editor) return;
+		const ctx = await this.getDocumentAndParse();
+		if (!ctx) return;
+		const { doc, parseResult } = ctx;
 
-		const parseResult = this.parseCache.getOrParse(editor.document);
 		const region = parseResult.editableRegions.find((r) => r.name === regionName);
 		if (!region) return;
 
-		const tabSize = typeof editor.options.tabSize === 'number' ? editor.options.tabSize : 4;
-		const raw = editor.document.getText(region.contentRange);
+		const editor = vscode.window.activeTextEditor;
+		const tabSize = typeof editor?.options.tabSize === 'number' ? editor.options.tabSize : 4;
+		const raw = doc.getText(region.contentRange);
 		const dedented = dedentBlock(raw, tabSize);
 		const text = format === 'markdown' ? htmlToMarkdown(dedented) : dedented;
 		await vscode.env.clipboard.writeText(text);
@@ -256,7 +352,8 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 		const results: string[] = [];
 
 		// Search for .dwt files across all workspace folders
-		const dwtFiles = await vscode.workspace.findFiles('**/Templates/**/*.dwt', '**/node_modules/**', 50);
+		// Limit matches findInstanceFiles (5000) so large sites aren't silently truncated
+		const dwtFiles = await vscode.workspace.findFiles('**/Templates/**/*.dwt', '**/node_modules/**', 5000);
 
 		for (const uri of dwtFiles) {
 			// Convert to site-relative path (e.g. /Templates/Division Page.dwt)
@@ -273,14 +370,14 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 	// ── Open attached template ───────────────────────────
 
 	private async openAttachedTemplate(): Promise<void> {
-		const editor = vscode.window.activeTextEditor;
-		if (!editor) return;
+		const ctx = await this.getDocumentAndParse();
+		if (!ctx) return;
+		const { doc, parseResult } = ctx;
 
-		const parseResult = this.parseCache.getOrParse(editor.document);
 		if (!parseResult.templateDeclaration) return;
 
 		const templateUri = await resolveTemplatePath(
-			editor.document.uri,
+			doc.uri,
 			parseResult.templateDeclaration.templatePath,
 		);
 		if (!templateUri) {
@@ -296,14 +393,14 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 	// ── Update current page ──────────────────────────────
 
 	private async updateCurrentPage(): Promise<void> {
-		const editor = vscode.window.activeTextEditor;
-		if (!editor) return;
+		const ctx = await this.getDocumentAndParse();
+		if (!ctx) return;
+		const { doc, parseResult } = ctx;
 
-		const parseResult = this.parseCache.getOrParse(editor.document);
 		if (!parseResult.templateDeclaration) return;
 
 		const templateUri = await resolveTemplatePath(
-			editor.document.uri,
+			doc.uri,
 			parseResult.templateDeclaration.templatePath,
 		);
 		if (!templateUri) {
@@ -333,10 +430,7 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 
 		const editableContents = new Map<string, string>();
 		for (const region of parseResult.editableRegions) {
-			editableContents.set(
-				region.name,
-				editor.document.getText(region.contentRange),
-			);
+			editableContents.set(region.name, doc.getText(region.contentRange));
 		}
 
 		const repeatEntries = new Map<string, Map<string, string>[]>();
@@ -346,7 +440,7 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 				region.entries.map((entry) => {
 					const m = new Map<string, string>();
 					for (const er of entry.editableRegions) {
-						m.set(er.name, editor.document.getText(er.contentRange));
+						m.set(er.name, doc.getText(er.contentRange));
 					}
 					return m;
 				}),
@@ -354,32 +448,49 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 		}
 
 		const instancePath = deriveInstancePath(
-			editor.document.uri,
+			doc.uri,
 			templateUri,
 			parseResult.templateDeclaration.templatePath,
 		);
 
-		const resolved = resolveTemplate({
-			templateText,
-			templatePath: parseResult.templateDeclaration.templatePath,
-			params,
-			paramTypes,
-			editableContents,
-			codeOutsideHTMLIsLocked: parseResult.templateDeclaration.codeOutsideHTMLIsLocked,
-			instancePath,
-			repeatEntries,
-		});
+		let resolved: string;
+		try {
+			resolved = resolveTemplate({
+				templateText,
+				templatePath: parseResult.templateDeclaration.templatePath,
+				params,
+				paramTypes,
+				editableContents,
+				codeOutsideHTMLIsLocked: parseResult.templateDeclaration.codeOutsideHTMLIsLocked,
+				instancePath,
+				repeatEntries,
+			});
+		} catch (err) {
+			vscode.window.showErrorMessage(
+				`Could not update page: ${err instanceof Error ? err.message : String(err)}`,
+			);
+			return;
+		}
 
-		const uri = editor.document.uri.toString();
+		if (resolved === doc.getText()) {
+			this.view?.webview.postMessage({ type: 'toast', message: 'Page is already up to date.', variant: 'success' });
+			return;
+		}
+
+		const uri = doc.uri.toString();
 		this.stateTracker.beginProgrammaticEdit(uri);
 		try {
 			const fullRange = new vscode.Range(
-				editor.document.positionAt(0),
-				editor.document.positionAt(editor.document.getText().length),
+				doc.positionAt(0),
+				doc.positionAt(doc.getText().length),
 			);
-			await editor.edit((editBuilder) => {
-				editBuilder.replace(fullRange, resolved);
-			});
+			const edit = new vscode.WorkspaceEdit();
+			edit.replace(doc.uri, fullRange, resolved);
+			await vscode.workspace.applyEdit(edit);
+			if (doc.isDirty) {
+				await doc.save();
+			}
+			this.notifyVisualEditor(doc.uri);
 			vscode.window.showInformationMessage('Page updated from template.');
 		} finally {
 			this.stateTracker.endProgrammaticEdit(uri);
@@ -389,8 +500,9 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 	// ── Detach from template ─────────────────────────────
 
 	private async detachFromTemplate(): Promise<void> {
-		const editor = vscode.window.activeTextEditor;
-		if (!editor) return;
+		const ctx = await this.getDocumentAndParse();
+		if (!ctx) return;
+		const { doc } = ctx;
 
 		const answer = await vscode.window.showWarningMessage(
 			'Detach from template? This will remove all template markers from the file.',
@@ -399,19 +511,22 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 		);
 		if (answer !== 'Detach') return;
 
-		const text = editor.document.getText();
+		const text = doc.getText();
 		const detached = stripTemplateMarkers(text);
 
-		const uri = editor.document.uri.toString();
+		const uri = doc.uri.toString();
 		this.stateTracker.beginProgrammaticEdit(uri);
 		try {
 			const fullRange = new vscode.Range(
-				editor.document.positionAt(0),
-				editor.document.positionAt(text.length),
+				doc.positionAt(0),
+				doc.positionAt(text.length),
 			);
-			await editor.edit((editBuilder) => {
-				editBuilder.replace(fullRange, detached);
-			});
+			const edit = new vscode.WorkspaceEdit();
+			edit.replace(doc.uri, fullRange, detached);
+			await vscode.workspace.applyEdit(edit);
+			if (doc.isDirty) {
+				await doc.save();
+			}
 		} finally {
 			this.stateTracker.endProgrammaticEdit(uri);
 		}
@@ -421,16 +536,17 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 	// ── Export all editable regions ──────────────────────
 
 	private async exportAllRegions(format: 'html' | 'markdown'): Promise<void> {
-		const editor = vscode.window.activeTextEditor;
-		if (!editor) return;
+		const ctx = await this.getDocumentAndParse();
+		if (!ctx) return;
+		const { doc, parseResult } = ctx;
 
-		const parseResult = this.parseCache.getOrParse(editor.document);
 		if (parseResult.editableRegions.length === 0) return;
 
-		const tabSize = typeof editor.options.tabSize === 'number' ? editor.options.tabSize : 4;
+		const editor = vscode.window.activeTextEditor;
+		const tabSize = typeof editor?.options.tabSize === 'number' ? editor.options.tabSize : 4;
 		let output = '';
 		for (const region of parseResult.editableRegions) {
-			const raw = editor.document.getText(region.contentRange).trim();
+			const raw = doc.getText(region.contentRange).trim();
 			const content = dedentBlock(raw, tabSize);
 			if (format === 'markdown') {
 				output += `## ${region.name}\n\n${htmlToMarkdown(content)}\n\n`;
@@ -440,24 +556,24 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 		}
 
 		const language = format === 'markdown' ? 'markdown' : 'html';
-		const doc = await vscode.workspace.openTextDocument({
+		const exportDoc = await vscode.workspace.openTextDocument({
 			content: output.trim(),
 			language,
 		});
-		await vscode.window.showTextDocument(doc);
+		await vscode.window.showTextDocument(exportDoc);
 	}
 
 	// ── Change template ──────────────────────────────────
 
 	private async changeTemplate(newTemplatePath: string): Promise<void> {
-		const editor = vscode.window.activeTextEditor;
-		if (!editor) return;
+		const ctx = await this.getDocumentAndParse();
+		if (!ctx) return;
+		const { doc, parseResult } = ctx;
 
-		const parseResult = this.parseCache.getOrParse(editor.document);
 		if (!parseResult.templateDeclaration) return;
 
 		// Resolve the new template file
-		const templateUri = await resolveTemplatePath(editor.document.uri, newTemplatePath);
+		const templateUri = await resolveTemplatePath(doc.uri, newTemplatePath);
 		if (!templateUri) {
 			vscode.window.showErrorMessage(`Could not find template: ${newTemplatePath}`);
 			return;
@@ -482,10 +598,7 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 
 		const editableContents = new Map<string, string>();
 		for (const region of parseResult.editableRegions) {
-			editableContents.set(
-				region.name,
-				editor.document.getText(region.contentRange),
-			);
+			editableContents.set(region.name, doc.getText(region.contentRange));
 		}
 
 		const repeatEntries = new Map<string, Map<string, string>[]>();
@@ -495,7 +608,7 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 				region.entries.map((entry) => {
 					const m = new Map<string, string>();
 					for (const er of entry.editableRegions) {
-						m.set(er.name, editor.document.getText(er.contentRange));
+						m.set(er.name, doc.getText(er.contentRange));
 					}
 					return m;
 				}),
@@ -503,32 +616,44 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 		}
 
 		const instancePath = deriveInstancePath(
-			editor.document.uri,
+			doc.uri,
 			templateUri,
 			newTemplatePath,
 		);
 
-		const resolved = resolveTemplate({
-			templateText,
-			templatePath: newTemplatePath,
-			params,
-			paramTypes,
-			editableContents,
-			codeOutsideHTMLIsLocked: parseResult.templateDeclaration.codeOutsideHTMLIsLocked,
-			instancePath,
-			repeatEntries,
-		});
+		let resolved: string;
+		try {
+			resolved = resolveTemplate({
+				templateText,
+				templatePath: newTemplatePath,
+				params,
+				paramTypes,
+				editableContents,
+				codeOutsideHTMLIsLocked: parseResult.templateDeclaration.codeOutsideHTMLIsLocked,
+				instancePath,
+				repeatEntries,
+			});
+		} catch (err) {
+			vscode.window.showErrorMessage(
+				`Could not change template: ${err instanceof Error ? err.message : String(err)}`,
+			);
+			return;
+		}
 
-		const uri = editor.document.uri.toString();
+		const uri = doc.uri.toString();
 		this.stateTracker.beginProgrammaticEdit(uri);
 		try {
 			const fullRange = new vscode.Range(
-				editor.document.positionAt(0),
-				editor.document.positionAt(editor.document.getText().length),
+				doc.positionAt(0),
+				doc.positionAt(doc.getText().length),
 			);
-			await editor.edit((editBuilder) => {
-				editBuilder.replace(fullRange, resolved);
-			});
+			const edit = new vscode.WorkspaceEdit();
+			edit.replace(doc.uri, fullRange, resolved);
+			await vscode.workspace.applyEdit(edit);
+			if (doc.isDirty) {
+				await doc.save();
+			}
+			this.notifyVisualEditor(doc.uri);
 		} finally {
 			this.stateTracker.endProgrammaticEdit(uri);
 		}
@@ -540,21 +665,27 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 		name: string,
 		newValue: string,
 	): Promise<void> {
-		const editor = vscode.window.activeTextEditor;
-		if (!editor) return;
+		const ctx = await this.getDocumentAndParse();
+		if (!ctx) return;
+		const { doc, parseResult } = ctx;
 
-		const parseResult = this.parseCache.getOrParse(editor.document);
-		if (!parseResult) return;
+		// Skip entirely if the param already has this value
+		const currentParam = parseResult.instanceParams.find((p) => p.name === name);
+		if (currentParam && currentParam.value === newValue) {
+			return;
+		}
 
-		const uri = editor.document.uri.toString();
+		const uri = doc.uri.toString();
 		this.stateTracker.beginProgrammaticEdit(uri);
 
 		try {
 			const success = await this.tryTemplateReapplication(
-				editor, parseResult, name, newValue,
-			) || await this.fallbackParamUpdate(editor, parseResult, name, newValue);
+				doc, parseResult, name, newValue,
+			) || await this.fallbackParamUpdate(doc, parseResult, name, newValue);
 
-			if (!success) {
+			if (success) {
+				this.notifyVisualEditor(doc.uri);
+			} else {
 				vscode.window.showErrorMessage(
 					`Failed to update parameter "${name}".`,
 				);
@@ -565,7 +696,7 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 	}
 
 	private async tryTemplateReapplication(
-		editor: vscode.TextEditor,
+		doc: vscode.TextDocument,
 		parseResult: ReturnType<ParseCache['getOrParse']>,
 		changedName: string,
 		changedValue: string,
@@ -573,7 +704,7 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 		if (!parseResult.templateDeclaration) return false;
 
 		const templateUri = await resolveTemplatePath(
-			editor.document.uri,
+			doc.uri,
 			parseResult.templateDeclaration.templatePath,
 		);
 		if (!templateUri) return false;
@@ -597,7 +728,7 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 		for (const region of parseResult.editableRegions) {
 			editableContents.set(
 				region.name,
-				editor.document.getText(region.contentRange),
+				doc.getText(region.contentRange),
 			);
 		}
 
@@ -608,7 +739,7 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 				region.entries.map((entry) => {
 					const m = new Map<string, string>();
 					for (const er of entry.editableRegions) {
-						m.set(er.name, editor.document.getText(er.contentRange));
+						m.set(er.name, doc.getText(er.contentRange));
 					}
 					return m;
 				}),
@@ -616,7 +747,7 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 		}
 
 		const instancePath = deriveInstancePath(
-			editor.document.uri,
+			doc.uri,
 			templateUri,
 			parseResult.templateDeclaration.templatePath,
 		);
@@ -632,18 +763,56 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 			repeatEntries,
 		});
 
+		const currentText = doc.getText();
+
+		// Skip if resolved output is identical to current content
+		if (currentText === resolved) {
+			console.log('[DWT] tryTemplateReapplication: SKIP — resolved === current');
+			return true;
+		}
+
+		// When the resolved output matches the on-disk (saved) content
+		// apart from blank-line whitespace, write the saved content instead.
+		const normalizeBlankLines = (s: string) => s.replace(/^[ \t]+$/gm, '');
+		let contentToWrite = resolved;
+		let matchesSavedFile = false;
+		try {
+			const savedBytes = await vscode.workspace.fs.readFile(doc.uri);
+			const savedText = Buffer.from(savedBytes).toString('utf-8');
+			if (normalizeBlankLines(resolved) === normalizeBlankLines(savedText)) {
+				if (currentText === savedText) {
+					return true; // already matches disk
+				}
+				contentToWrite = savedText;
+				matchesSavedFile = true;
+			}
+		} catch {
+			// File may not exist on disk yet — use resolved output
+		}
+
 		const fullRange = new vscode.Range(
-			editor.document.positionAt(0),
-			editor.document.positionAt(editor.document.getText().length),
+			doc.positionAt(0),
+			doc.positionAt(currentText.length),
 		);
 
-		return editor.edit((editBuilder) => {
-			editBuilder.replace(fullRange, resolved);
-		});
+		const edit = new vscode.WorkspaceEdit();
+		edit.replace(doc.uri, fullRange, contentToWrite);
+		const result = await vscode.workspace.applyEdit(edit);
+
+		// VS Code tracks dirty state by edit history, not content comparison.
+		// applyEdit always marks the doc as modified even if the content now
+		// matches what's on disk.  When we restored the saved content, save
+		// to clear the dirty flag — the buffer already equals disk so this
+		// is a filesystem no-op that just resets the dirty indicator.
+		if (result && matchesSavedFile && doc.isDirty) {
+			await doc.save();
+		}
+
+		return result;
 	}
 
 	private async fallbackParamUpdate(
-		editor: vscode.TextEditor,
+		doc: vscode.TextDocument,
 		parseResult: ReturnType<ParseCache['getOrParse']>,
 		name: string,
 		newValue: string,
@@ -651,9 +820,14 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 		const param = parseResult.instanceParams.find((p) => p.name === name);
 		if (!param) return false;
 
-		return editor.edit((editBuilder) => {
-			editBuilder.replace(param.valueRange, newValue);
-		});
+		// Skip if value hasn't actually changed
+		if (param.value === newValue) {
+			return true;
+		}
+
+		const edit = new vscode.WorkspaceEdit();
+		edit.replace(doc.uri, param.valueRange, newValue);
+		return vscode.workspace.applyEdit(edit);
 	}
 
 	// ── Repeat region entry manipulation ─────────────────
@@ -664,38 +838,37 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 	 * If the region has no entries yet (new file), returns the raw inner template block instead.
 	 */
 	private async addRepeatEntry(regionName: string): Promise<void> {
-		const editor = vscode.window.activeTextEditor;
-		if (!editor) return;
+		const ctx = await this.getDocumentAndParse();
+		if (!ctx) return;
+		const { doc, parseResult } = ctx;
 
-		const parseResult = this.parseCache.getOrParse(editor.document);
 		const region = parseResult.repeatRegions.find((r) => r.name === regionName);
-		if (!region) return;
-
-		if (region.entries.length === 0) return; // No entries to duplicate
+		if (!region || region.entries.length === 0) return;
 
 		// Duplicate the last entry's text
 		const lastEntry = region.entries[region.entries.length - 1];
-		const entryText = editor.document.getText(lastEntry.fullRange);
+		const entryText = doc.getText(lastEntry.fullRange);
 
 		// Insert after the end of the last entry (before InstanceEndRepeat)
 		const insertPosition = lastEntry.fullRange.end;
 
-		const uri = editor.document.uri.toString();
+		const uri = doc.uri.toString();
 		this.stateTracker.beginProgrammaticEdit(uri);
 		try {
-			await editor.edit((eb) => {
-				eb.insert(insertPosition, '\n' + entryText);
-			});
+			const edit = new vscode.WorkspaceEdit();
+			edit.insert(doc.uri, insertPosition, '\n' + entryText);
+			await vscode.workspace.applyEdit(edit);
+			this.notifyVisualEditor(doc.uri);
 		} finally {
 			this.stateTracker.endProgrammaticEdit(uri);
 		}
 	}
 
 	private async removeRepeatEntry(regionName: string, entryIndex: number): Promise<void> {
-		const editor = vscode.window.activeTextEditor;
-		if (!editor) return;
+		const ctx = await this.getDocumentAndParse();
+		if (!ctx) return;
+		const { doc, parseResult } = ctx;
 
-		const parseResult = this.parseCache.getOrParse(editor.document);
 		const region = parseResult.repeatRegions.find((r) => r.name === regionName);
 		if (!region || region.entries.length <= 1) return; // Keep at least one entry
 
@@ -703,55 +876,56 @@ export class PropertiesPanelProvider implements vscode.WebviewViewProvider {
 		if (!entry) return;
 
 		// Determine range to delete: the entry's full range plus the preceding newline
-		const text = editor.document.getText();
-		const entryStart = editor.document.offsetAt(entry.fullRange.start);
-		const entryEnd = editor.document.offsetAt(entry.fullRange.end);
+		const text = doc.getText();
+		const entryStart = doc.offsetAt(entry.fullRange.start);
 		// Include the newline before the entry if present
 		const deleteStart = entryStart > 0 && text[entryStart - 1] === '\n'
 			? entryStart - 1
 			: entryStart;
 
 		const deleteRange = new vscode.Range(
-			editor.document.positionAt(deleteStart),
+			doc.positionAt(deleteStart),
 			entry.fullRange.end,
 		);
 
-		const uri = editor.document.uri.toString();
+		const uri = doc.uri.toString();
 		this.stateTracker.beginProgrammaticEdit(uri);
 		try {
-			await editor.edit((eb) => {
-				eb.delete(deleteRange);
-			});
+			const edit = new vscode.WorkspaceEdit();
+			edit.delete(doc.uri, deleteRange);
+			await vscode.workspace.applyEdit(edit);
+			this.notifyVisualEditor(doc.uri);
 		} finally {
 			this.stateTracker.endProgrammaticEdit(uri);
 		}
 	}
 
-	private async moveRepeatEntry(regionName: string, entryIndex: number, direction: 'up' | 'down'): Promise<void> {
-		const editor = vscode.window.activeTextEditor;
-		if (!editor) return;
+	private async moveRepeatEntry(regionName: string, fromIndex: number, toIndex: number): Promise<void> {
+		const ctx = await this.getDocumentAndParse();
+		if (!ctx) return;
+		const { doc, parseResult } = ctx;
 
-		const parseResult = this.parseCache.getOrParse(editor.document);
 		const region = parseResult.repeatRegions.find((r) => r.name === regionName);
 		if (!region) return;
+		if (fromIndex < 0 || fromIndex >= region.entries.length) return;
+		if (toIndex < 0 || toIndex >= region.entries.length) return;
+		if (fromIndex === toIndex) return;
 
-		const swapIndex = direction === 'up' ? entryIndex - 1 : entryIndex + 1;
-		if (swapIndex < 0 || swapIndex >= region.entries.length) return;
+		const entryA = region.entries[Math.min(fromIndex, toIndex)];
+		const entryB = region.entries[Math.max(fromIndex, toIndex)];
 
-		const entryA = region.entries[Math.min(entryIndex, swapIndex)];
-		const entryB = region.entries[Math.max(entryIndex, swapIndex)];
+		const textA = doc.getText(entryA.fullRange);
+		const textB = doc.getText(entryB.fullRange);
 
-		const textA = editor.document.getText(entryA.fullRange);
-		const textB = editor.document.getText(entryB.fullRange);
-
-		const uri = editor.document.uri.toString();
+		const uri = doc.uri.toString();
 		this.stateTracker.beginProgrammaticEdit(uri);
 		try {
-			await editor.edit((eb) => {
-				// Replace in reverse document order to keep ranges valid
-				eb.replace(entryB.fullRange, textA);
-				eb.replace(entryA.fullRange, textB);
-			});
+			const edit = new vscode.WorkspaceEdit();
+			// Replace in reverse document order to keep ranges valid
+			edit.replace(doc.uri, entryB.fullRange, textA);
+			edit.replace(doc.uri, entryA.fullRange, textB);
+			await vscode.workspace.applyEdit(edit);
+			this.notifyVisualEditor(doc.uri);
 		} finally {
 			this.stateTracker.endProgrammaticEdit(uri);
 		}

@@ -13,6 +13,16 @@
         "kind": "build",
         "isDefault": true
       }
+    },
+    {
+      "label": "Release Extension",
+      "type": "shell",
+      "command": "npm run release",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
     }
   ]
 }

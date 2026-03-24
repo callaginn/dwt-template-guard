@@ -1,22 +1,19 @@
 {
 	"name": "dwt-template-guard",
 	"displayName": "Dreamweaver Template Guard",
-	"description": "Prevents edits to non-editable regions in Dreamweaver template files (.dwt, .html)",
-	"version": "0.1.7",
+	"description": "A complete Dreamweaver template workflow for VS Code, including edit protection, template propagation, library item syncing, and dependency management.",
+	"version": "0.2.5",
 	"publisher": "callaginn",
-	"license": "MIT",
-	"icon": "media/icon.png",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/callaginn/dwt-template-guard"
-	},
 	"author": {
 		"name": "Stephen Ginn",
 		"email": "callaginn@users.noreply.github.com",
 		"url": "https://cremadesignstudio.com/staff/callaginn"
 	},
-	"engines": {
-		"vscode": "^1.85.0"
+	"license": "MIT",
+	"icon": "media/icon.png",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/callaginn/dwt-template-guard"
 	},
 	"categories": [
 		"Other"
@@ -28,10 +25,24 @@
 		"editable regions",
 		"protection"
 	],
+	"scripts": {
+		"vscode:prepublish": "npm run check-types && node esbuild.mjs --production",
+		"check-types": "tsc --noEmit",
+		"watch": "npm-run-all -p watch:*",
+		"watch:esbuild": "node esbuild.mjs --watch",
+		"watch:tsc": "tsc --noEmit --watch --preserveWatchOutput",
+		"test": "tsc -p tsconfig.test.json && vscode-test",
+		"vsix": "vsce package --no-dependencies --out releases/",
+		"release": "node scripts/release.js",
+		"lint": "eslint src/"
+	},
+	"engines": {
+		"vscode": "^1.85.0"
+	},
+	"main": "./dist/extension.js",
 	"activationEvents": [
 		"onStartupFinished"
 	],
-	"main": "./dist/extension.js",
 	"contributes": {
 		"colors": [
 			{
@@ -85,6 +96,21 @@
 				"path": "./syntaxes/dwt.tmLanguage.json"
 			}
 		],
+		"customEditors": [
+			{
+				"viewType": "dwtTemplateGuard.visualEditor",
+				"displayName": "DWT Visual Editor",
+				"selector": [
+					{
+						"filenamePattern": "*.html"
+					},
+					{
+						"filenamePattern": "*.htm"
+					}
+				],
+				"priority": "option"
+			}
+		],
 		"commands": [
 			{
 				"command": "dwtTemplateGuard.showEditableRegions",
@@ -118,6 +144,12 @@
 				"category": "DWT Guard"
 			},
 			{
+				"command": "dwtTemplateGuard.openVisualEditor",
+				"title": "Open Visual Editor",
+				"category": "DWT Guard",
+				"icon": "$(open-preview)"
+			},
+			{
 				"command": "dwtTemplateGuard.refreshDependencyTree",
 				"title": "Refresh",
 				"category": "DWT Guard",
@@ -132,6 +164,13 @@
 					"group": "5_dwtTemplateGuard"
 				}
 			],
+			"editor/title": [
+				{
+					"command": "dwtTemplateGuard.openVisualEditor",
+					"when": "dwtTemplateGuard.isTemplateInstance",
+					"group": "navigation"
+				}
+			],
 			"editor/context": [
 				{
 					"command": "dwtTemplateGuard.showEditableRegions",
@@ -141,6 +180,11 @@
 				{
 					"command": "dwtTemplateGuard.toggleProtection",
 					"when": "resourceLangId == html || resourceLangId == dwt",
+					"group": "navigation"
+				},
+				{
+					"command": "dwtTemplateGuard.openVisualEditor",
+					"when": "dwtTemplateGuard.isTemplateInstance",
 					"group": "navigation"
 				}
 			],
@@ -170,7 +214,7 @@
 			"activitybar": [
 				{
 					"id": "dwtTemplateGuard",
-					"title": "DWT Template Guard",
+					"title": "DWT Guard",
 					"icon": "media/icon.svg"
 				}
 			]
@@ -190,7 +234,7 @@
 			]
 		},
 		"configuration": {
-			"title": "Dreamweaver Template Guard",
+			"title": "DWT Guard",
 			"properties": {
 				"dwtTemplateGuard.enableProtection": {
 					"type": "boolean",
@@ -247,6 +291,11 @@
 					"type": "boolean",
 					"default": true,
 					"description": "Show 'Open Template' CodeLens above the InstanceBegin comment in template instance files."
+				},
+				"dwtTemplateGuard.previewServerUrl": {
+					"type": "string",
+					"default": "",
+					"description": "Optional: URL of a running local dev server (e.g. http://localhost:3000). When set, the visual editor routes all asset requests through this server instead of spinning up its own."
 				}
 			}
 		},
@@ -256,18 +305,8 @@
 			}
 		}
 	},
-	"scripts": {
-		"vscode:prepublish": "npm run package",
-		"compile": "npm run check-types && node esbuild.mjs && tsc -p tsconfig.test.json",
-		"check-types": "tsc --noEmit",
-		"watch": "npm-run-all -p watch:*",
-		"watch:esbuild": "node esbuild.mjs --watch",
-		"watch:tsc": "tsc --noEmit --watch --preserveWatchOutput",
-		"package": "npm run check-types && node esbuild.mjs --production",
-		"vsix": "vsce package --out releases/",
-		"pretest": "npm run compile",
-		"test": "vscode-test",
-		"lint": "eslint src/"
+	"dependencies": {
+		"@vscode/codicons": "^0.0.44"
 	},
 	"devDependencies": {
 		"@types/mocha": "^10.0.0",
@@ -279,8 +318,5 @@
 		"eslint": "^9.0.0",
 		"npm-run-all": "^4.1.5",
 		"typescript": "^5.5.0"
-	},
-	"dependencies": {
-		"@vscode/codicons": "^0.0.44"
 	}
 }

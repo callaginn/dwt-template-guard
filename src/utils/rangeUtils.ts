@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
-/** Returns true if two ranges overlap (share any common area). */
+/** Returns true if two ranges overlap (share any common area).
+ *  Not used by the extension core — retained as a tested public utility. */
 export function rangeOverlaps(a: vscode.Range, b: vscode.Range): boolean {
 	if (a.end.isBeforeOrEqual(b.start)) return false;
 	if (a.start.isAfterOrEqual(b.end)) return false;

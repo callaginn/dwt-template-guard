@@ -3,7 +3,6 @@
 	const root = document.getElementById('root');
 
 	let allFiles = [];
-	let templateData = null;
 	let selectedIndices = new Set();
 	let lastClickedIndex = -1;
 
@@ -11,7 +10,6 @@
 		const message = event.data;
 		if (message.type === 'init') {
 			allFiles = message.files;
-			templateData = message.templateData;
 			render();
 		}
 	});
@@ -97,7 +95,6 @@
 			vscode.postMessage({
 				type: 'update',
 				selectedFiles: filesToUpdate,
-				templateData: templateData,
 			});
 		});
 
