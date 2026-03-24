@@ -34,7 +34,7 @@ npm test    # runs tests in a VS Code instance via @vscode/test-electron
 npm run lint
 ```
 
-### 3. Build and Release
+### 3. Build and Install
 
 | Command | What it does |
 |---------|-------------|
@@ -43,6 +43,10 @@ npm run lint
 | `npm run release` | Interactive: bumps version, builds, packages, and installs the VSIX locally |
 
 `npm run release` is also available via **Tasks: Run Task > Release Extension** in the Command Palette.
+
+### 4. Add to VSCode Marketplace
+Create a new publisher and install on the marketplace:
+https://marketplace.visualstudio.com/manage
 
 ---
 
